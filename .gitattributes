@@ -1,0 +1,13 @@
+# Store every text file with LF line endings in git, whatever OS you edit on.
+# Without this, Windows checkouts show every file as "modified" and merges
+# produce whole-file conflicts that are really just line-ending noise.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.heic binary
+*.m4a binary
+*.caf binary
+*.mp3 binary
+*.wav binary

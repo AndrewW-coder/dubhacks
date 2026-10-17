@@ -1,22 +1,58 @@
-// Maps an original message to its relayed copies in each member's thread.
+// Maps an original message to its copy in every member's thread. Owned by User 1.
 // Needed so replies, tapbacks, edits, and unsends land on the right copy.
+//
+// The sender's own original counts as their "copy", so a tapback on the
+// original (in the sender's thread) is mirrored onto everyone else's copy too.
 
-// originalId → (recipient handle → relayed message ID)
-const map = new Map<string, Map<string, string>>();
+import type { Translation } from "../types.js";
 
-export function recordRelay(originalId: string, recipientHandle: string, relayedId: string): void {
-  if (!map.has(originalId)) map.set(originalId, new Map());
-  map.get(originalId)!.set(recipientHandle, relayedId);
+export interface OriginalInfo {
+  fromHandle: string;
+  text?: string;
+  sentAt: Date;
 }
 
-export function getRelayedCopies(originalId: string): Map<string, string> {
-  return map.get(originalId) ?? new Map();
+export interface Copy {
+  messageId: string;
+  translation?: Translation; // what this recipient was shown (for "?" and edits)
 }
 
-/** Given a relayed copy's ID (e.g. someone replied to it), find the original message. */
-export function findOriginal(relayedId: string): string | undefined {
-  for (const [originalId, copies] of map) {
-    for (const id of copies.values()) if (id === relayedId) return originalId;
-  }
-  return undefined;
+const originals = new Map<string, OriginalInfo>(); // originalId → info
+const copies = new Map<string, Map<string, Copy>>(); // originalId → (handle → copy)
+const copyToOriginal = new Map<string, string>(); // any copy ID → originalId
+const lastInThread = new Map<string, string>(); // handle → most recent originalId shown there
+
+export function recordOriginal(originalId: string, info: OriginalInfo): void {
+  originals.set(originalId, info);
+  recordRelay(originalId, info.fromHandle, originalId);
+}
+
+export function recordRelay(originalId: string, handle: string, messageId: string, translation?: Translation): void {
+  if (!copies.has(originalId)) copies.set(originalId, new Map());
+  copies.get(originalId)!.set(handle, { messageId, translation });
+  copyToOriginal.set(messageId, originalId);
+  lastInThread.set(handle, originalId);
+}
+
+export function getOriginal(originalId: string): OriginalInfo | undefined {
+  return originals.get(originalId);
+}
+
+export function updateOriginalText(originalId: string, text: string): void {
+  const o = originals.get(originalId);
+  if (o) o.text = text;
+}
+
+export function getCopies(originalId: string): Map<string, Copy> {
+  return copies.get(originalId) ?? new Map();
+}
+
+/** Given any message ID (an original or a relayed copy), find the original's ID. */
+export function findOriginal(messageId: string): string | undefined {
+  return copyToOriginal.get(messageId);
+}
+
+/** The most recent message shown in a member's thread (for a bare "?" with no reply target). */
+export function lastOriginalIn(handle: string): string | undefined {
+  return lastInThread.get(handle);
 }

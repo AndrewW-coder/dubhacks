@@ -1,0 +1,35 @@
+{
+  "id": "demo-family",
+  "name": "The Lin family",
+  "members": [
+    {
+      "id": "nainai",
+      "name": "Nai Nai",
+      "handle": "+15550000001",
+      "language": "zh",
+      "relationship": "grandmother",
+      "isBilingualReviewer": false,
+      "currency": "TWD"
+    },
+    {
+      "id": "kevin",
+      "name": "Kevin",
+      "handle": "+15550000002",
+      "language": "en",
+      "relationship": "grandson",
+      "isBilingualReviewer": false,
+      "currency": "USD"
+    },
+    {
+      "id": "mei",
+      "name": "Mei",
+      "handle": "+15550000003",
+      "language": "en",
+      "relationship": "granddaughter",
+      "isBilingualReviewer": true,
+      "reviewLanguages": ["en", "zh"],
+      "currency": "USD",
+      "isTrustedForMoney": true
+    }
+  ]
+}

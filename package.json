@@ -4,15 +4,32 @@
   "private": true,
   "description": "iMessage agent that lets families who speak different languages chat naturally",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
+    "sim": "tsx src/sim.ts",
+    "sim:demo": "tsx src/sim.ts data/demo-script.txt",
+    "photon:smoke": "tsx src/photon/smoke.ts",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "@grpc/grpc-js": "^1.12.6",
+    "@photon-ai/advanced-imessage": "^2.3.0",
+    "dotenv": "^16.4.5",
+    "nice-grpc": "^2.1.11",
+    "nice-grpc-common": "^2.0.2"
+  },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "protobufjs@7.6.6": true
   }
 }

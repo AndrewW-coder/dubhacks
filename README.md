@@ -53,14 +53,15 @@ They answer with a tapback, and only then does the message send. Bridge learns f
 
 ```
 iMessage (each family member)
-        ↕  Photon SDK (runs on a Mac signed in to iMessage)
+        ↕  Photon Advanced iMessage Kit (gRPC, hosted by Photon; no Mac needed)
    Bridge server (Node + TypeScript)
-     ├─ relay/        maps messages, replies, and tapbacks across threads
+     ├─ photon/       the only code that knows about Photon (live client + terminal simulator)
+     ├─ relay/        maps messages, replies, and tapbacks across threads; asks-and-waits prompts
      ├─ translate/    Claude + family glossary + relationship context
      ├─ review/       low-confidence → bilingual-member DM queue
      ├─ media/        speech-to-text, text-to-speech, photo translation
      ├─ payments/     Visa Direct (sandbox) + scam checks
-     └─ db/           family members, languages, glossary, message ID map
+     └─ db/           family members, languages
 ```
 
 ## Repo layout
@@ -69,24 +70,26 @@ iMessage (each family member)
 .
 ├── README.md                 ← you are here
 ├── docs/
-│   ├── PLAN.md               build plan, task split, demo script
+│   ├── PARALLEL_PLAN.md      User 1 / User 2 split, file ownership, merge rules
+│   ├── USER1_ROLES.md        short brief for User 1 (AndrewW-coder)
+│   ├── PHOTON_SETUP.md       how to get Photon credentials and run live
+│   ├── PLAN.md               priorities, timeline, demo script
 │   └── EDGE_CASES.md         edge cases we handle (and show judges)
+├── data/
+│   ├── family.example.json   demo family (fake numbers); copy to family.json for real phones
+│   └── demo-script.txt       scripted end-to-end run for the simulator
 ├── src/
-│   ├── index.ts              entry point: starts the Photon listener
+│   ├── index.ts              entry point: per-sender queues, starts the listener
+│   ├── sim.ts                `npm run sim`: same app against the terminal simulator
 │   ├── config.ts             loads environment variables
-│   ├── types.ts              shared types (FamilyMember, RelayedMessage, …)
-│   ├── photon/client.ts      thin wrapper around the Photon SDK
-│   ├── relay/router.ts       fans an incoming message out to every other member
-│   ├── relay/messageMap.ts   original message ID ↔ relayed copy IDs
-│   ├── translate/translator.ts   tone-aware translation with Claude
-│   ├── translate/confidence.ts   decides when a human needs to check
-│   ├── translate/glossary.ts     per-family terms and nicknames
-│   ├── review/bridgeReview.ts    bilingual-member approval queue
-│   ├── media/voice.ts        voice note transcription and synthesis
-│   ├── media/image.ts        photo and document translation
-│   ├── payments/visa.ts      Visa Direct sandbox transfers
-│   ├── payments/scamCheck.ts rules for confirming money requests
-│   └── db/store.ts           storage (start in-memory, swap for SQLite later)
+│   ├── types.ts              shared types (FamilyMember, IncomingMessage, Translation, …)
+│   ├── photon/               port.ts (interface), client.ts (picks mode), live.ts, mock.ts, smoke.ts
+│   ├── relay/                router.ts, messageMap.ts, prompts.ts (ask & wait), explain.ts ("?")
+│   ├── translate/            translator.ts, confidence.ts, glossary.ts
+│   ├── review/bridgeReview.ts    bilingual-member approval
+│   ├── media/                voice.ts, image.ts
+│   ├── payments/             flow.ts (money conversations), visa.ts, scamCheck.ts
+│   └── db/store.ts           in-memory storage loaded from data/family*.json
 ├── .env.example              copy to .env and fill in
 ├── package.json
 └── tsconfig.json
@@ -98,17 +101,18 @@ iMessage (each family member)
 git clone https://github.com/AndrewW-coder/dubhacks.git
 cd dubhacks
 npm install
-cp .env.example .env   # then fill in your keys
-npm run dev
+cp .env.example .env     # add ANTHROPIC_API_KEY; Photon keys only needed for live mode
+
+npm run sim:demo         # scripted run in the terminal, no iMessage needed
+npm run sim              # type as any family member: "nainai: 你吃饭了吗"
+npm run dev              # live iMessage (PHOTON_MODE=live in .env, see docs/PHOTON_SETUP.md)
 ```
 
-> Photon requires a **Mac signed in to iMessage** to act as the host. Check Photon 2.0's setup docs or ask at the Photon booth.
+Photon's Advanced iMessage Kit runs against Photon's hosted server, so **no Mac is required**. Any laptop works. Only one process should run in live mode at a time.
 
 ## Team
 
-| Name | Focus |
-|---|---|
-| TBD | Photon integration + relay |
-| TBD | Translation + human checks |
-| TBD | Visa payments |
-| TBD | Voice/photos, demo, Devpost |
+| Name | Role | Focus |
+|---|---|---|
+| [AndrewW-coder](https://github.com/AndrewW-coder) | User 1 | Photon integration, relay, human review, live demo |
+| [reallyrealistic](https://github.com/reallyrealistic) | User 2 | Translation, glossary, voice/photos, Visa payments, Devpost |

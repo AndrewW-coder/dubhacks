@@ -1,5 +1,8 @@
 # Build Plan
 
+> **Who does what, and in what order:** see [`PARALLEL_PLAN.md`](PARALLEL_PLAN.md) (User 1 / User 2 split).
+> **Photon setup:** see [`PHOTON_SETUP.md`](PHOTON_SETUP.md).
+
 ## Priorities
 If we fall behind, cut from the bottom of this list first.
 
@@ -12,19 +15,21 @@ If we fall behind, cut from the bottom of this list first.
 
 ## Timeline (24 hours)
 
-| Hours | Goal | Owner |
+Work runs in parallel; see PARALLEL_PLAN.md for the hour-by-hour split and sync points.
+
+| Hours | User 1, AndrewW-coder (Photon, relay, review) | User 2, reallyrealistic (translation, media, payments) |
 |---|---|---|
-| 0–3 | Photon setup, receive and send messages, basic relay between two people | |
-| 3–8 | Translation with tone and relationships, family profiles, glossary | |
-| 8–12 | Confidence check + bilingual-member DM flow with tapback approval | |
-| 12–15 | Relaying replies, tapbacks, edits, and unsends | |
-| 15–18 | Voice notes and photo translation | |
-| 18–21 | Visa Direct sandbox gift flow + scam checks | |
-| 21–24 | Edge case cleanup, demo rehearsal, Devpost writeup | |
+| 0–0.5 | Phase 0 together: scaffold pushed, keys shared | Phase 0 together |
+| 0.5–4 | Photon credentials, smoke test, live relay on real phones | Claude translator with tone, relationships, glossary |
+| 4–7 | Human review flow | Confidence scoring, emergencies, glossary learning |
+| 7–10 | Relay sync edge cases | Voice notes, photos |
+| 10–16 | Polish, hardening, live-testing User 2 features on phones | Visa Direct sandbox, payment conversation flow |
+| 16–18 | Demo phones + demo script | Help-with-needs, language edge cases |
+| 18–24 | Feature freeze → live testing, backup video, rehearsal | Feature freeze → Devpost, README, rehearsal |
 
 ## Things to ask sponsors early
-- **Photon:** what's new in 2.0? Host setup requirements? Which features (tapbacks, edits, unsends, voice) are exposed by the SDK?
-- **Visa:** which APIs and sandbox does the track expect (Visa Direct, others)? Can one project win multiple tracks?
+- **Photon:** can we get a line **address + token** for `@photon-ai/advanced-imessage` (gRPC)? Do edit, unsend, tapbacks and threaded replies work on the shared line? Do all test phones reach the same Bridge number? Limits? (Full list in PHOTON_SETUP.md §1.)
+- **Visa:** which APIs and sandbox does the track expect (Visa Direct, Foreign Exchange Rates, others)? Can one project win multiple tracks?
 
 ## Demo script (about 3 minutes)
 1. **The story** (20 seconds): a teammate and their grandparents, and what gets lost between them.
@@ -35,6 +40,6 @@ If we fall behind, cut from the bottom of this list first.
 6. **Edge case:** unsend a message and show it disappear from everyone's view.
 
 ## Open questions
-- Which languages do we demo? (Use a teammate's real family language.)
-- Speech-to-text and text-to-speech provider?
-- SQLite vs. in-memory store for the demo?
+- Which languages do we demo? (Use a teammate's real family language.) → decide in Phase 0
+- Speech-to-text and text-to-speech provider? → User 2 decides in U2.5
+- SQLite vs. in-memory store for the demo? → in-memory now; SQLite is a User 1 stretch goal

@@ -12,3 +12,8 @@ build/
 Thumbs.db
 .vscode/
 .idea/
+
+# Real phone numbers live here, never in git. Copy data/family.example.json.
+data/family.json
+# Downloaded voice notes and photos
+.bridge-tmp/

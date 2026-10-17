@@ -1,0 +1,22 @@
+# Run with: npm run sim:demo
+# A quick end-to-end pass over every relay path. Edit freely (owned by User 1).
+
+nainai: 你吃饭了吗？
+kevin: reply b1 Yes Nai Nai, I had dumplings!
+nainai: tapback b3 love
+kevin: edit u2 Yes Nai Nai, I had YOUR dumplings!
+kevin: unsend u2
+
+# Low-confidence translation → Mei is asked privately, answers "A"
+nainai: 🧪 你这孩子真是的
+/wait 200
+mei: A
+
+# Emergency skips review
+nainai: help I fell
+
+# "?" on a relayed message shows the original and context
+kevin: reply b1 ?
+
+# Money (handled by src/payments/flow.ts once User 2 builds it)
+kevin: send Nai Nai $50 for New Year
