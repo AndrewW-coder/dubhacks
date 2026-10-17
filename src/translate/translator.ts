@@ -18,7 +18,7 @@
 
 import { hasClaude, callTool } from "./claude.js";
 import { findLearnedMeaning, getGlossary } from "./glossary.js";
-import { needsReview } from "./confidence.js";
+import { isEmergency, needsReview } from "./confidence.js";
 import type { Family, FamilyMember, Translation } from "../types.js";
 
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -75,6 +75,8 @@ export async function translate(
       confidence: clamp(Number(result.confidence)),
       notes: typeof result.notes === "string" ? result.notes.trim() || undefined : undefined,
     };
+    // Never let a cultural note downplay a possible emergency ("elders often exaggerate…").
+    if (isEmergency(text)) clean.notes = undefined;
     clean.alternatives = cleanAlternatives(result.alternatives, clean.text);
     if (needsReview(text, clean) && !clean.alternatives.length) {
       const literal = await literalTranslation(text, from, to);
@@ -179,21 +181,27 @@ Translate the way a warm, bilingual relative would, not a dictionary:
 Confidence (0 to 1) is how sure you are the recipient will understand what the sender meant:
 - 0.9 or above: plain statements, greetings, questions, logistics, clear praise.
 - 0.5 to 0.75: idioms, proverbs, sarcasm or teasing, dialect words, ambiguous slang, emotionally loaded lines where a wrong guess could hurt feelings, or anything with two plausible readings.
+- Short replies whose feeling depends on tone of voice (the equivalents of "whatever", "fine", "sure, you're always right", "you and your ways…") can be affectionate, resigned, sarcastic or hurt. Text alone can't tell, so use 0.6 to 0.7 and give one alternative per reading. This holds even when the most common reading feels obvious to you.
 - Below 0.5: you are guessing.
 Whenever confidence is below 0.8, you MUST give 1 to 3 "alternatives": other full translations reflecting the other plausible meanings (not rewordings of the same meaning). A bilingual relative will pick one.
 
 "notes" is one short sentence of cultural context for a curious reader (e.g. "Asking whether you've eaten is how she says she cares."), or empty when there is nothing worth explaining.
+
+Possible emergencies (a fall, pain, trouble breathing, chest tightness, bleeding, a hospital, a call for help): translate plainly and keep the urgency. Never suggest, in the text or the notes, that it is probably minor, dramatic or exaggerated. Leave notes empty.
 
 Examples (sender → recipient: message ⇒ submit_translation input):
 
 Nai Nai (grandmother, zh) → Kevin (grandson, en): 你吃饭了吗？
 ⇒ {"text":"Have you eaten yet?","confidence":0.95,"notes":"Asking whether you've eaten is a Chinese grandma's way of saying she cares."}
 
-Kevin (grandson, en) → Nai Nai (grandmother, zh): lol ok Nai Nai, ngl your dumplings slap 🥟
-⇒ {"text":"好的奶奶，说真的，您包的饺子太好吃了 🥟","confidence":0.9}
+Kevin (grandson, en) → Nai Nai (grandmother, zh): Nai Nai this soup is bussin fr 🍲
+⇒ {"text":"奶奶，这汤真的太好喝了！🍲","confidence":0.9}
 
-Nai Nai (grandmother, zh) → Kevin (grandson, en): 你翅膀硬了是吧
-⇒ {"text":"So you think you don't need us anymore, huh?","confidence":0.6,"alternatives":["You're all grown up now and doing things your own way.","Your wings have grown strong, huh?"],"notes":"Literally 'your wings are hard': an elder teasing or complaining that a child has become too independent."}
+Nai Nai (grandmother, zh) → Kevin (grandson, en): 你这是胳膊肘往外拐啊
+⇒ {"text":"Whose side are you on, huh?","confidence":0.6,"alternatives":["You're taking someone else's side over your own family's.","Your elbow bends outward, doesn't it?"],"notes":"Literally 'your elbow bends outward': teasing (or scolding) someone for siding with outsiders over family."}
+
+Nai Nai (grandmother, zh) → Kevin (grandson, en): 行吧，你高兴就好
+⇒ {"text":"Okay, as long as you're happy.","confidence":0.65,"alternatives":["Fine. Do whatever makes you happy, then.","Alright, if that makes you happy, I'm happy too."],"notes":"Can be warm acceptance or quiet disappointment, depending on her tone."}
 
 Kevin (grandson, en) → Nai Nai (grandmother, zh): omw to Costco, need anything?
 ⇒ {"text":"奶奶，我正在去Costco的路上，您需要买什么吗？","confidence":0.95}`;
