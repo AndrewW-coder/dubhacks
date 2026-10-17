@@ -14,8 +14,7 @@ export type Answer = { via: "tapback"; tapback: TapbackKind } | { via: "text"; t
 interface Pending {
   handle: string;
   messageId: string;
-  resolve: (a: Answer | null) => void;
-  timer: NodeJS.Timeout;
+  resolve: (a: Answer) => void;
 }
 
 const pending = new Map<string, Pending>(); // prompt message ID → pending prompt
@@ -29,13 +28,30 @@ const SHORT_ANSWER = /^\s*(a|b|c|d|1|2|3|4|y|n|yes|no|ok|confirm|cancel|是|不|
  * Resolves null after `timeoutMs` with no answer.
  */
 export async function ask(handle: string, text: string, timeoutMs: number): Promise<Answer | null> {
-  const messageId = await sendText(handle, text);
+  return (await askFirst([{ handle, text }], timeoutMs))?.answer ?? null;
+}
+
+/**
+ * Sends each member their own question at once and resolves with the first
+ * answer and who gave it. The other questions are withdrawn, so a late answer
+ * from someone else is relayed as normal chat. Resolves null after `timeoutMs`.
+ */
+export async function askFirst(
+  questions: { handle: string; text: string }[],
+  timeoutMs: number,
+): Promise<{ handle: string; answer: Answer } | null> {
+  const ids = await Promise.all(questions.map((q) => sendText(q.handle, q.text)));
   return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      pending.delete(messageId);
-      resolve(null);
-    }, timeoutMs);
-    pending.set(messageId, { handle, messageId, resolve, timer });
+    const done = (result: { handle: string; answer: Answer } | null) => {
+      clearTimeout(timer);
+      for (const id of ids) pending.delete(id);
+      resolve(result);
+    };
+    const timer = setTimeout(() => done(null), timeoutMs);
+    ids.forEach((messageId, i) => {
+      const handle = questions[i]!.handle;
+      pending.set(messageId, { handle, messageId, resolve: (answer) => done({ handle, answer }) });
+    });
   });
 }
 
@@ -52,7 +68,6 @@ export function tryResolvePrompt(msg: IncomingMessage): boolean {
   }
   if (!target) return false;
 
-  clearTimeout(target.timer);
   pending.delete(target.messageId);
   target.resolve(
     msg.kind === "tapback" ? { via: "tapback", tapback: msg.tapback! } : { via: "text", text: msg.text?.trim() ?? "" },

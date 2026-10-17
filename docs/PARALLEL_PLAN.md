@@ -113,11 +113,11 @@ You're on Claude Pro: use Sonnet in Claude Code, clear the conversation between 
 - **Done when:** a message from phone A appears on phones B and C as `Name: text`, and tapbacks/edits/unsends mirror.
 
 ### U1.3 Human review flow (H4–7), `src/review/bridgeReview.ts`
-- [ ] Pick the reviewer whose `reviewLanguages` cover both languages, and never the sender.
-- [ ] Tapback answers: say "👍 = A, ❤️ = B" in the question and map them in `askReviewer()`.
-- [ ] Timeout: send the best guess with `uncertain: true` (already done), then confirm the "(translation unsure…)" note reads well.
-- [ ] Two reviewers: ask both and take the first answer; tell the other "Mei already answered, thanks!"
-- [ ] Write the question in the **reviewer's** language (call `translate()`).
+- [x] Pick the reviewer whose `reviewLanguages` cover both languages, and never the sender.
+- [x] Tapback answers: say "👍 = A, ❤️ = B" in the question and map them in `askReviewer()`.
+- [x] Timeout: send the best guess with `uncertain: true` (already done), then confirm the "(translation unsure…)" note reads well.
+- [x] Two reviewers: ask both and take the first answer; tell the other "Mei already answered, thanks!"
+- [x] Write the question in the **reviewer's** language (call `translate()`).
 - [ ] With User 2, agree the glossary entry format that `addEntry()` gets from a review answer (S2).
 - **Done when:** `🧪` messages are held, the reviewer answers by letter or by tapback, and the right meaning sends.
 
@@ -127,6 +127,7 @@ You're on Claude Pro: use Sonnet in Claude Code, clear the conversation between 
 - [ ] Tapbacks appear to come from "Bridge": add a short "Kevin ❤️ your message" text for elders (make it optional per member).
 - [ ] A new member joins mid-conversation: add a `join` command or edit `family.json` and restart, so the demo still works.
 - [ ] Simultaneous messages: confirm the per-sender queue in `index.ts` keeps order, and emergencies jump the queue (already done).
+- [ ] While one message waits for a reviewer (up to `REVIEW_TIMEOUT_MS`), that sender's later messages are held behind it. Decide whether to relay later messages that don't need review in the meantime.
 - [ ] Reconnect: kill your network for 30 s and check that `catchUp` replays the missed messages without duplicates.
 - **Done when:** your section of `docs/EDGE_CASES.md` is ticked.
 
