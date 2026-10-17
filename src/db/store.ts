@@ -2,19 +2,30 @@
 // In-memory, loaded from data/family.json (real numbers, gitignored) or
 // data/family.example.json (fake numbers, used by the simulator).
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, watchFile } from "node:fs";
 import { config } from "../config.js";
 import type { Family, FamilyMember } from "../types.js";
 
-const families: Family[] = [loadFamilyFile()];
+// The simulator uses the example family unless FAMILY_FILE says otherwise, so a real
+// data/family.json (live phones) never breaks the demo script.
+const defaults = config.photonMode === "live" ? ["data/family.json", "data/family.example.json"] : ["data/family.example.json"];
+const familyPath = [config.familyFile, ...defaults].find((p) => p && existsSync(p))!;
+let families: Family[] = [readFamily()];
+console.log(`[store] family loaded from ${familyPath}`);
 
-function loadFamilyFile(): Family {
-  // The simulator uses the example family unless FAMILY_FILE says otherwise, so a real
-  // data/family.json (live phones) never breaks the demo script.
-  const defaults = config.photonMode === "live" ? ["data/family.json", "data/family.example.json"] : ["data/family.example.json"];
-  const path = [config.familyFile, ...defaults].find((p) => p && existsSync(p))!;
-  console.log(`[store] family loaded from ${path}`);
-  return JSON.parse(readFileSync(path, "utf8")) as Family;
+// Edit the family file while Bridge runs (e.g. add a member mid-conversation) and it reloads,
+// so the demo never needs a restart (which would forget the message map).
+watchFile(familyPath, { interval: 1000 }, () => {
+  try {
+    families = [readFamily()];
+    console.log(`[store] family reloaded: ${families[0]!.members.map((m) => m.name).join(", ")}`);
+  } catch (err) {
+    console.error("[store] family file is invalid, keeping the previous one", err);
+  }
+});
+
+function readFamily(): Family {
+  return JSON.parse(readFileSync(familyPath, "utf8")) as Family;
 }
 
 export function getFamilyByHandle(handle: string): Family | undefined {

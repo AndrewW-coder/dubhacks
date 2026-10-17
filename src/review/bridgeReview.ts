@@ -7,8 +7,8 @@
 import { config } from "../config.js";
 import { askFirst, type Answer } from "../relay/prompts.js";
 import { sendText } from "../photon/client.js";
+import { say } from "../relay/say.js";
 import { addEntry } from "../translate/glossary.js";
-import { translate } from "../translate/translator.js";
 import type { Family, FamilyMember, LanguageCode, TapbackKind, Translation } from "../types.js";
 
 const LETTERS = ["A", "B", "C", "D"];
@@ -107,43 +107,16 @@ async function question(
 ): Promise<string> {
   const icons = options.map((_, i) => `${TAPBACK_ICONS[i]} ${LETTERS[i]}`).join(" · ");
   const [ask, how] = await Promise.all([
-    inLanguage(family, reviewer, `Which ${languageName(recipient.language)} meaning is right?`),
-    inLanguage(family, reviewer, `Reply with a letter or tap back: ${icons} · 👎 none fit. Or reply to this message with a better translation.`),
+    say(family, reviewer, `Which ${languageName(recipient.language)} meaning is right?`),
+    say(family, reviewer, `Reply with a letter or tap back: ${icons} · 👎 none fit. Or reply to this message with a better translation.`),
   ]);
   return [`🤔 ${sender.name}: “${originalText}”`, ask, ...options.map((o, i) => `${LETTERS[i]}) ${o}`), how].join("\n");
 }
 
 async function notify(family: Family, reviewers: FamilyMember[], text: string) {
   for (const r of reviewers) {
-    await sendText(r.handle, await inLanguage(family, r, text)).catch((err) => console.error("[review] notice failed", err));
+    await sendText(r.handle, await say(family, r, text)).catch((err) => console.error("[review] notice failed", err));
   }
-}
-
-// ── Writing Bridge's own words in the reviewer's language ────────────────
-
-const BRIDGE: FamilyMember = {
-  id: "bridge",
-  name: "Bridge",
-  handle: "",
-  language: "en",
-  relationship: "assistant",
-  isBilingualReviewer: false,
-};
-const phraseCache = new Map<string, Promise<string>>(); // language|text → translated
-
-function inLanguage(family: Family, reader: FamilyMember, text: string): Promise<string> {
-  if (reader.language === BRIDGE.language) return Promise.resolve(text);
-  const key = `${reader.language}|${text}`;
-  if (!phraseCache.has(key)) {
-    phraseCache.set(
-      key,
-      translate(text, BRIDGE, reader, family).then(
-        (t) => t.text,
-        () => text, // on a translator error, fall back to English rather than losing the question
-      ),
-    );
-  }
-  return phraseCache.get(key)!;
 }
 
 function languageName(code: LanguageCode): string {

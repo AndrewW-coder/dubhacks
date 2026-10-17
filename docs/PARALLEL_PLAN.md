@@ -122,12 +122,12 @@ You're on Claude Pro: use Sonnet in Claude Code, clear the conversation between 
 - **Done when:** `🧪` messages are held, the reviewer answers by letter or by tapback, and the right meaning sends.
 
 ### U1.4 Relay sync edge cases (H7–10), `src/relay/router.ts`
-- [ ] Edit after 15 min: send "✏️ correction: …" as a threaded reply instead.
-- [ ] Unsend after 2 min: edit the copy to "(message removed)" instead.
-- [ ] Tapbacks appear to come from "Bridge": add a short "Kevin ❤️ your message" text for elders (make it optional per member).
-- [ ] A new member joins mid-conversation: add a `join` command or edit `family.json` and restart, so the demo still works.
-- [ ] Simultaneous messages: confirm the per-sender queue in `index.ts` keeps order, and emergencies jump the queue (already done).
-- [ ] While one message waits for a reviewer (up to `REVIEW_TIMEOUT_MS`), that sender's later messages are held behind it. Decide whether to relay later messages that don't need review in the meantime.
+- [x] Edit after 15 min: send "✏️ correction: …" as a threaded reply instead.
+- [x] Unsend after 2 min: edit the copy to "(message removed)" instead.
+- [x] Tapbacks appear to come from "Bridge": add a short "Kevin ❤️ your message" text for elders (make it optional per member).
+- [x] A new member joins mid-conversation: add a `join` command or edit `family.json` and restart, so the demo still works.
+- [x] Simultaneous messages: confirm the per-sender queue in `index.ts` keeps order, and emergencies jump the queue (already done).
+- [x] While one message waits for a reviewer (up to `REVIEW_TIMEOUT_MS`), that sender's later messages are held behind it. Decide whether to relay later messages that don't need review in the meantime.
 - [ ] Reconnect: kill your network for 30 s and check that `catchUp` replays the missed messages without duplicates.
 - **Done when:** your section of `docs/EDGE_CASES.md` is ticked.
 

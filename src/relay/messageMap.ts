@@ -15,6 +15,7 @@ export interface OriginalInfo {
 export interface Copy {
   messageId: string;
   translation?: Translation; // what this recipient was shown (for "?" and edits)
+  sentAt: Date; // iMessage only allows edits for 15 min and unsends for 2 min after this
 }
 
 const originals = new Map<string, OriginalInfo>(); // originalId → info
@@ -29,7 +30,9 @@ export function recordOriginal(originalId: string, info: OriginalInfo): void {
 
 export function recordRelay(originalId: string, handle: string, messageId: string, translation?: Translation): void {
   if (!copies.has(originalId)) copies.set(originalId, new Map());
-  copies.get(originalId)!.set(handle, { messageId, translation });
+  const existing = copies.get(originalId)!.get(handle);
+  const sentAt = existing?.messageId === messageId ? existing.sentAt : new Date(); // an edit keeps the original send time
+  copies.get(originalId)!.set(handle, { messageId, translation, sentAt });
   copyToOriginal.set(messageId, originalId);
   lastInThread.set(handle, originalId);
 }
