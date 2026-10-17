@@ -2,6 +2,8 @@
 
 Two people, 24 hours, almost no merge conflicts. **Find your role, read your section, and start.**
 
+> 🛍️ **Next phase:** the Visa track pivot to shopping is specced in [`specs/VISA-SHOPPING.md`](specs/VISA-SHOPPING.md), with each person's tasks, the shared contracts and the build order. The ownership rules below still apply.
+
 | | Who | Owns | In one line |
 |---|---|---|---|
 | **User 1** | **AndrewW-coder** (better laptop, Claude Pro) | Photon, relay, human review, live demo machine | "Messages get to the right phones, in sync." |

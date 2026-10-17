@@ -3,6 +3,8 @@
 > **Who does what, and in what order:** see [`PARALLEL_PLAN.md`](PARALLEL_PLAN.md) (User 1 / User 2 split).
 > **Photon setup:** see [`PHOTON_SETUP.md`](PHOTON_SETUP.md).
 
+> 🛍️ **New direction for the Visa track ("Reimagine Shopping"):** Bridge shops for the people you love. A need in the chat leads to personalized options in each language, a family tapback vote, then Visa checkout and order updates. See [`specs/VISA-SHOPPING.md`](specs/VISA-SHOPPING.md) for the demo, ownership, contracts and build order. It replaces "Visa gifts" as the main Visa feature; gifts stay as a secondary option.
+
 ## Priorities
 If we fall behind, cut from the bottom of this list first.
 
