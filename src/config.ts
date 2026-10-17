@@ -14,6 +14,8 @@ export const config = {
   imessageAddress: env("IMESSAGE_ADDRESS"),
   imessageToken: env("IMESSAGE_TOKEN"),
   imessageTls: env("IMESSAGE_TLS", "true") !== "false",
+  spectrumProjectId: env("SPECTRUM_PROJECT_ID"),
+  spectrumProjectSecret: env("SPECTRUM_PROJECT_SECRET"),
   reviewTimeoutMs: Number(env("REVIEW_TIMEOUT_MS", "120000")),
 
   // User 2: translation / media / payments
