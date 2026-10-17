@@ -15,5 +15,7 @@ Thumbs.db
 
 # Real phone numbers live here, never in git. Copy data/family.example.json.
 data/family.json
+# Glossary entries learned from reviewers (per machine)
+data/glossary.json
 # Downloaded voice notes and photos
 .bridge-tmp/
