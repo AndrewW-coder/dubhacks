@@ -23,12 +23,12 @@ Each section has one owner (see `docs/PARALLEL_PLAN.md`), so **only tick your ow
 - [ ] Mixed-language messages (code-switching)
 - [ ] Romanized text (e.g. pinyin, romaji)
 - [ ] Words that should stay untranslated: names, brands, family glossary terms
-- [ ] Emoji-only or sticker-only messages (relay without translating)
+- [x] Emoji-only or sticker-only messages (relay without translating)
 - [ ] Slang and abbreviations from younger family members
-- [ ] Bridge learns from corrections and stops asking about the same phrase
-- [ ] Translation API fails or times out → message still gets through
+- [x] Bridge learns from corrections and stops asking about the same phrase
+- [x] Translation API fails or times out → message still gets through
 
 ## User 2: Safety and money
 - [ ] Emergency messages ("I fell", "help") skip the human check, go to everyone right away, and get flagged (in every demo language)
-- [ ] Money requests *from* a grandparent are confirmed with a trusted family member first
+- [x] Money requests *from* a grandparent are confirmed with a trusted family member first
 - [ ] Payment fails or is declined → clear message in the sender's language

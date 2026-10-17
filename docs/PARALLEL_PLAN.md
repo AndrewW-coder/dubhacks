@@ -7,7 +7,7 @@ Two people, 24 hours, almost no merge conflicts. **Find your role, read your sec
 | **User 1** | **AndrewW-coder** (better laptop, Claude Pro) | Photon, relay, human review, live demo machine | "Messages get to the right phones, in sync." |
 | **User 2** | **reallyrealistic** (Claude Max) | Translation, confidence, glossary, voice notes, photos, Visa payments | "What the messages say, and the money." |
 
-Why this split: User 1's work is hands-on (Photon booth, real phones, running the live bot all weekend) and uses less Claude, so it suits the stronger laptop and the Pro plan's limits. User 2's work is the code-heavy, prompt-iterating part, which suits Claude Max; it runs only the light terminal simulator, so the laptop doesn't matter. Short brief for User 1: [`USER1_ROLES.md`](USER1_ROLES.md).
+Why this split: User 1's work is hands-on (Photon booth, real phones, running the live bot all weekend) and uses less Claude, so it suits the stronger laptop and the Pro plan's limits. User 2's work is the code-heavy, prompt-iterating part, which suits Claude Max; it runs only the light terminal simulator, so the laptop doesn't matter. Short brief for User 1: [`USER1_ROLES.md`](USER1_ROLES.md). Step-by-step guide for User 2: [`USER2_GUIDE.md`](USER2_GUIDE.md).
 
 How this avoids conflicts: **every file has exactly one owner**, and the files both people touch (types, config, the router's call sites) were written and frozen in Phase 0. User 2 never edits the router; every User 2 feature is already called from it through a fixed function signature. Until the real code lands, each of those functions returns a placeholder, so the whole app runs end to end from minute one (`npm run sim:demo`).
 

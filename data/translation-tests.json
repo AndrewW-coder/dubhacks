@@ -1,0 +1,164 @@
+{
+  "_comment": "Run with: npm run try:translate (add --json for a machine-readable summary). 'expect' is what a good result looks like: high = should send directly, low = should go to a reviewer, emergency = must skip review. Swap in your real demo languages.",
+  "from": "nainai",
+  "to": "kevin",
+  "phrases": [
+    {
+      "text": "你吃饭了吗？",
+      "expect": "high",
+      "why": "greeting that really means 'I care about you'"
+    },
+    {
+      "text": "早点睡觉，别熬夜",
+      "expect": "high",
+      "why": "plain grandma advice"
+    },
+    {
+      "text": "奶奶想你了",
+      "expect": "high",
+      "why": "emotional but unambiguous; 'Nai Nai' should stay as-is"
+    },
+    {
+      "text": "我给你包了饺子",
+      "expect": "high",
+      "why": "glossary dish name"
+    },
+    {
+      "text": "过年回来吗？",
+      "expect": "high",
+      "why": "logistics question"
+    },
+    {
+      "text": "你这孩子真是的",
+      "expect": "low",
+      "why": "can be fond exasperation or real annoyance"
+    },
+    {
+      "text": "吃不了兜着走",
+      "expect": "low",
+      "why": "idiom: literally 'take leftovers away', means 'you'll face the consequences'"
+    },
+    {
+      "text": "你翅膀硬了",
+      "expect": "low",
+      "why": "idiom: 'your wings are hard' = you think you don't need us anymore"
+    },
+    {
+      "text": "好好好，你说的都对",
+      "expect": "low",
+      "why": "likely sarcastic"
+    },
+    {
+      "text": "随便你",
+      "expect": "low",
+      "why": "'whatever you want' — neutral or hurt"
+    },
+    {
+      "text": "ni chi fan le ma",
+      "expect": "high",
+      "why": "pinyin (romanized) input"
+    },
+    {
+      "text": "今天去了Costco买了好多东西",
+      "expect": "high",
+      "why": "code-switching with a brand name"
+    },
+    {
+      "text": "❤️❤️❤️",
+      "expect": "high",
+      "why": "emoji only, should pass through untranslated"
+    },
+    {
+      "text": "救命，我摔倒了",
+      "expect": "emergency",
+      "why": "must skip review and flag 🚨"
+    },
+    {
+      "text": "我在医院，别担心",
+      "expect": "high",
+      "why": "hospital mention but calm: should NOT be an emergency"
+    },
+    {
+      "text": "Kevin啊，你又不穿外套，冻感冒了别找奶奶哭",
+      "expect": "high",
+      "why": "affectionate scolding: loving nag, not anger; 'Kevin' stays as-is"
+    },
+    {
+      "text": "wo xiang ni le, zao dian hui jia",
+      "expect": "high",
+      "why": "pinyin without tones: 'I miss you, come home soon'"
+    },
+    {
+      "text": "你妈妈说你最近很忙，周末给你爸打个电话",
+      "expect": "high",
+      "why": "kinship terms (妈妈/爸) must become Mom/Dad naturally"
+    },
+    {
+      "text": "这个周末我们去Target还是Costco？",
+      "expect": "high",
+      "why": "two brand names kept as-is inside Chinese"
+    },
+    {
+      "text": "救命这个好好笑",
+      "expect": "high",
+      "why": "internet slang 'OMG this is so funny': NOT an emergency"
+    }
+  ],
+  "reverse": [
+    {
+      "text": "lol ok Nai Nai, ngl your dumplings slap",
+      "expect": "high",
+      "why": "slang from a grandchild, must become respectful and warm"
+    },
+    {
+      "text": "I'm fine, just busy with midterms",
+      "expect": "high",
+      "why": "plain"
+    },
+    {
+      "text": "help I fell",
+      "expect": "emergency",
+      "why": "English emergency"
+    },
+    {
+      "text": "can you help me with the recipe?",
+      "expect": "high",
+      "why": "'help' but NOT an emergency"
+    },
+    {
+      "text": "that's sick!",
+      "expect": "low",
+      "why": "slang that could read as 'that's an illness'"
+    },
+    {
+      "text": "ngl Nai Nai that red envelope was lowkey so generous fr",
+      "expect": "high",
+      "why": "stacked slang (ngl, lowkey, fr) must become sincere thanks"
+    },
+    {
+      "text": "omw to Costco, need anything?",
+      "expect": "high",
+      "why": "abbreviation + brand kept"
+    },
+    {
+      "text": "Nai Nai 我今天做了 dumplings 跟你学的",
+      "expect": "high",
+      "why": "code-switching: only the English word needs translating"
+    },
+    {
+      "text": "Mom said Grandpa's birthday dinner is at Auntie Lin's",
+      "expect": "high",
+      "why": "kinship terms: Mom, Grandpa, Auntie must map to the right Chinese terms"
+    },
+    {
+      "text": "bruh I'm dead 💀",
+      "expect": "low",
+      "why": "slang that reads as death to an elder; actually 'that's so funny'"
+    },
+    {
+      "text": "I fell asleep early lol",
+      "expect": "high",
+      "why": "'I fell' but NOT an emergency"
+    }
+  ]
+}

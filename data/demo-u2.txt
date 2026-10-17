@@ -1,0 +1,79 @@
+# User 2's scripted check: npm run sim:u2
+# Translation, emergencies, glossary learning, and the full money flow. Owned by User 2.
+
+nainai: 你吃饭了吗？
+kevin: lol ok Nai Nai, ngl your dumplings slap
+kevin: ❤️❤️❤️
+
+# Not emergencies
+kevin: can you help me with the recipe?
+nainai: 我在医院，别担心
+# Emergencies (🚨, skip review)
+nainai: 救命，我摔倒了
+
+# Review, then learning: the second time the same phrase is NOT sent for review
+nainai: 🧪 你这孩子真是的
+/wait 200
+mei: A
+nainai: 🧪 你这孩子真是的
+# Expected: FOUR "Nai Nai: [zh→en] meaning A" lines right after this, not a bug. The first two are
+# the first message, released to Kevin and Mei once Mei answers A; the next two are the repeat,
+# sent straight away from the learned glossary (no second review question).
+
+# ── Money (src/payments/flow.ts) ────────────────────────────────────────
+# Money prompts show who/how much on their own first line (never translated), then Bridge's
+# question in the reader's language. Only a whole-message yes (or ❤️) counts; one money
+# question per person at a time (a new gift while a help offer is open gets "Answer my
+# earlier question first 🙂").
+# Kevin sends a gift and confirms: Nai Nai gets a warm 🧧 with the note in Chinese
+kevin: send Nai Nai $50 for New Year
+/wait 200
+kevin: yes
+/wait 400
+
+# A Chinese red envelope from an elder: Mei (trusted) approves first, then Nai Nai confirms with 好
+nainai: 给Kevin发个红包，100块
+/wait 200
+mei: yes
+/wait 200
+nainai: 好
+/wait 400
+
+# A cancel
+kevin: give mei $20
+/wait 200
+kevin: no
+/wait 200
+
+# Unknown recipient → a hint with real names; over the $1,000 demo cap → a friendly no
+kevin: send Bob $20
+kevin: send Mei $5000
+
+# Talking about money is just chat, not a payment
+kevin: I spent $20 on groceries today
+kevin: Nai Nai gave me $20 yesterday
+
+# ── Scam protection (src/payments/scamCheck.ts) ─────────────────────────
+# Nai Nai asks for money for gift cards, urgently and in secret: it is relayed as chat,
+# and only Mei (trusted) is asked, with the reasons spelled out. Mei says no.
+nainai: 我需要钱买礼品卡，很急，别告诉你爸妈
+/wait 600
+mei: no
+/wait 200
+
+# ── Help with real needs (src/payments/needs.ts) ────────────────────────
+# Nai Nai mentions her medicine: Kevin and Mei are both offered; Kevin says yes first,
+# Mei's later yes gets "Already handled, thank you!"
+nainai: 我的药快吃完了，好贵
+/wait 600
+kevin: yes
+/wait 600
+mei: yes
+/wait 400
+
+# ── Timeout (keep this last) ────────────────────────────────────────────
+# Nobody answers: after the confirm timeout (PAYMENT_CONFIRM_TIMEOUT_MS, default 3 minutes)
+# Kevin is told "No answer, so I didn't send it." The script ends before that; run
+# `npm run sim` and wait to see it, or set PAYMENT_CONFIRM_TIMEOUT_MS=5000 for a quick try.
+kevin: send Mei $10
+/wait 300
