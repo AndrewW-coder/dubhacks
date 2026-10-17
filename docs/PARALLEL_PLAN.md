@@ -106,9 +106,9 @@ You're on Claude Pro: use Sonnet in Claude Code, clear the conversation between 
 - **Done when:** every row of the PHOTON_SETUP §3 table produces the right `IncomingMessage` (log it with `PHOTON_DEBUG=1`).
 
 ### U1.2 Live relay between real phones (H1.5–4)
-- [ ] Create `data/family.json` with 2–3 real phones (yours, User 2's, a third device or friend).
-- [ ] `npm run dev` with `PHOTON_MODE=live`, then test: text, threaded reply, tapback, edit, unsend between two phones.
-- [ ] Check there's no echo loop and no duplicate relays, and that reply threading lands on the right bubble in every thread.
+- [x] Create `data/family.json` with 2–3 real phones (yours, User 2's, a third device or friend).
+- [x] `npm run dev` with `PHOTON_MODE=live`, then test: text, threaded reply, tapback, edit, unsend between two phones.
+- [x] Check there's no echo loop and no duplicate relays, and that reply threading lands on the right bubble in every thread.
 - [ ] **S1:** pull User 2's translator, and show real translated messages on real phones.
 - **Done when:** a message from phone A appears on phones B and C as `Name: text`, and tapbacks/edits/unsends mirror.
 

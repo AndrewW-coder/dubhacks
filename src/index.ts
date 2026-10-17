@@ -22,6 +22,7 @@ function enqueue(msg: IncomingMessage): Promise<void> {
 async function main() {
   console.log(`Bridge starting (PHOTON_MODE=${config.photonMode})…`);
   await onMessage(async (msg) => {
+    if (config.photonMode === "live") console.log(`[in] ${msg.kind} from ${msg.fromHandle} (${msg.id})`);
     // Answers to Bridge's own questions are handled immediately, never queued or relayed.
     // (Queuing them could deadlock: a sender's queue may be waiting on exactly this answer.)
     if (tryResolvePrompt(msg)) return;

@@ -25,9 +25,16 @@ All Photon code lives in `src/photon/`. Nothing else imports Photon.
 
 ## 1. Get credentials
 
-1. On <https://app.photon.codes>, create a project and add **iMessage**. You get a shared-pool number (ours: **+1 (628) 289-4567**).
-2. **Users page:** add every phone that will text Bridge, including your teammate, demo phones and **the judges' phones before the demo**. The shared line ignores anyone not on that list.
-3. Every phone must **text the line first**. A shared line can't start a conversation.
+1. On <https://app.photon.codes>, create a project and add **iMessage**.
+2. **Users page:** add every phone that will text Bridge, including your teammate, demo phones and **the judges' phones before the demo**. The shared pool ignores anyone not on that list.
+3. **Each user gets their own Bridge number.** The shared pool assigns every user a number of their own, and texting a different user's number gets "number wasn't recognized". Look up each person's number with:
+
+   ```bash
+   npx -y @photon-ai/cli@latest spectrum users list --project <project id> --json
+   ```
+
+   (`phoneNumber` is the person, `assignedPhoneNumber` is the Bridge number they text.) Bridge doesn't care: each member already has their own 1:1 thread, and Spectrum sends through the right line. For the demo, each judge needs their own number looked up after being added. A dedicated number (Business plan) would give everyone the same one.
+4. Every phone must **text its Bridge number first**. A shared line can't start a conversation.
 4. Get the project secret with Photon's CLI:
 
    ```bash
@@ -73,8 +80,8 @@ Add `PHOTON_DEBUG=1` to print the raw Spectrum and iMessage payloads. If somethi
 ## 4. Run Bridge live
 
 1. Copy `data/family.example.json` to `data/family.json` (gitignored) and put in real phone numbers in E.164 format (`+1…`) or Apple ID emails.
-2. Each person texts the Bridge number once.
-3. Run `npm run dev`.
+2. Each person texts **their own** Bridge number once (see §1.3).
+3. Run `npm run dev` with `PHOTON_MODE=live` (in PowerShell: `$env:PHOTON_MODE = 'live'; npm run dev`). Every incoming event logs one `[in] …` line.
 
 ## 5. Mock mode (for everyone else)
 
