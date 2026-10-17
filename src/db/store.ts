@@ -9,7 +9,10 @@ import type { Family, FamilyMember } from "../types.js";
 const families: Family[] = [loadFamilyFile()];
 
 function loadFamilyFile(): Family {
-  const path = [config.familyFile, "data/family.json", "data/family.example.json"].find((p) => p && existsSync(p))!;
+  // The simulator uses the example family unless FAMILY_FILE says otherwise, so a real
+  // data/family.json (live phones) never breaks the demo script.
+  const defaults = config.photonMode === "live" ? ["data/family.json", "data/family.example.json"] : ["data/family.example.json"];
+  const path = [config.familyFile, ...defaults].find((p) => p && existsSync(p))!;
   console.log(`[store] family loaded from ${path}`);
   return JSON.parse(readFileSync(path, "utf8")) as Family;
 }
