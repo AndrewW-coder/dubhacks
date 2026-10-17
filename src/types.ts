@@ -16,6 +16,7 @@ export interface FamilyMember {
   reviewLanguages?: LanguageCode[]; // languages this reviewer reads, e.g. ["en", "zh"]
   currency?: string; // e.g. "USD", "TWD" (used for Visa gifts)
   isTrustedForMoney?: boolean; // confirms money requests coming from elders
+  tapbackNotes?: boolean; // also get a short text like "❤️ Kevin loved your message" (tapbacks are easy to miss)
 }
 
 export interface Family {

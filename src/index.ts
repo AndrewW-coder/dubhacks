@@ -1,5 +1,6 @@
 // Entry point: listens for iMessages and hands them to the relay. Owned by User 1.
 
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { config } from "./config.js";
 import { onMessage } from "./photon/client.js";
 import { handleIncoming } from "./relay/router.js";
@@ -19,8 +20,43 @@ function enqueue(msg: IncomingMessage): Promise<void> {
   return next;
 }
 
+// Only one Bridge may listen on the live line, or every message is relayed twice.
+const LOCK = ".bridge-tmp/live.lock";
+
+async function claimLiveLock() {
+  const isAlive = (pid: number) => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const holder = () => {
+    try {
+      const pid = Number(readFileSync(LOCK, "utf8"));
+      return pid && pid !== process.pid && isAlive(pid) ? pid : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  // Give a restarting watcher's old process a moment to exit before giving up.
+  for (let i = 0; i < 10 && holder(); i++) await new Promise((r) => setTimeout(r, 300));
+  const pid = holder();
+  if (pid) {
+    console.error(`Another Bridge (pid ${pid}) is already listening on the live line. Stop it first, or every message is relayed twice.`);
+    process.exit(1);
+  }
+  mkdirSync(".bridge-tmp", { recursive: true });
+  writeFileSync(LOCK, String(process.pid));
+  process.on("exit", () => {
+    if (holder() === undefined) rmSync(LOCK, { force: true });
+  });
+}
+
 async function main() {
   console.log(`Bridge starting (PHOTON_MODE=${config.photonMode})…`);
+  if (config.photonMode === "live") await claimLiveLock();
   await onMessage(async (msg) => {
     if (config.photonMode === "live") console.log(`[in] ${msg.kind} from ${msg.fromHandle} (${msg.id})`);
     // Answers to Bridge's own questions are handled immediately, never queued or relayed.

@@ -81,7 +81,9 @@ Add `PHOTON_DEBUG=1` to print the raw Spectrum and iMessage payloads. If somethi
 
 1. Copy `data/family.example.json` to `data/family.json` (gitignored) and put in real phone numbers in E.164 format (`+1…`) or Apple ID emails.
 2. Each person texts **their own** Bridge number once (see §1.3).
-3. Run `npm run dev` with `PHOTON_MODE=live` (in PowerShell: `$env:PHOTON_MODE = 'live'; npm run dev`). Every incoming event logs one `[in] …` line.
+3. Run `npm start` with `PHOTON_MODE=live` (in PowerShell: `$env:PHOTON_MODE = 'live'; npm start`). Every incoming event logs one `[in] …` line.
+   - **Don't use `npm run dev` for live on Windows.** When `tsx watch` restarts after a file change, the process detaches from the terminal and keeps running invisibly. The next copy then relays every message twice. Restart `npm start` by hand after code changes. Edits to the family file reload on their own.
+   - Bridge refuses to start live if another copy holds `.bridge-tmp/live.lock`. If it says so, find the old copy and stop it.
 
 ## 5. Mock mode (for everyone else)
 
