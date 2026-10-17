@@ -12,6 +12,8 @@
     "start": "tsx src/index.ts",
     "sim": "tsx src/sim.ts",
     "sim:demo": "tsx src/sim.ts data/demo-script.txt",
+    "sim:u2": "tsx src/sim.ts data/demo-u2.txt",
+    "try:translate": "tsx src/translate/try.ts",
     "photon:smoke": "tsx src/photon/smoke.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -20,17 +22,15 @@
     "@grpc/grpc-js": "^1.12.6",
     "@photon-ai/advanced-imessage": "^2.3.0",
     "dotenv": "^16.4.5",
+    "heic-convert": "^2.1.0",
     "nice-grpc": "^2.1.11",
     "nice-grpc-common": "^2.0.2",
     "spectrum-ts": "^12.11.0"
   },
   "devDependencies": {
+    "@types/heic-convert": "^2.1.1",
     "@types/node": "^20.11.0",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0"
-  },
-  "allowScripts": {
-    "esbuild@0.28.2": true,
-    "protobufjs@7.6.6": true
   }
 }

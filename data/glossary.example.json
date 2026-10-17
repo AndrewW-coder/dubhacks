@@ -1,0 +1,40 @@
+{
+  "_comment": "Seed glossary, checked in. Learned entries (from reviewers) are saved to data/glossary.json, which overlays this file. keepAsIs: true = never translate. language (optional) = language of 'meaning'.",
+  "demo-family": [
+    {
+      "term": "Nai Nai",
+      "meaning": "Grandma (father's mother)",
+      "keepAsIs": true
+    },
+    {
+      "term": "奶奶",
+      "meaning": "Nai Nai — Grandma (father's mother)",
+      "keepAsIs": true
+    },
+    {
+      "term": "Kevin",
+      "meaning": "grandson",
+      "keepAsIs": true
+    },
+    {
+      "term": "Mei",
+      "meaning": "granddaughter",
+      "keepAsIs": true
+    },
+    {
+      "term": "饺子",
+      "meaning": "dumplings (jiaozi), Nai Nai's specialty",
+      "keepAsIs": false
+    },
+    {
+      "term": "红包",
+      "meaning": "red envelope (hongbao) with gift money",
+      "keepAsIs": false
+    },
+    {
+      "term": "Costco",
+      "meaning": "warehouse store brand",
+      "keepAsIs": true
+    }
+  ]
+}
