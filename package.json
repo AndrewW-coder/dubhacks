@@ -21,7 +21,8 @@
     "@photon-ai/advanced-imessage": "^2.3.0",
     "dotenv": "^16.4.5",
     "nice-grpc": "^2.1.11",
-    "nice-grpc-common": "^2.0.2"
+    "nice-grpc-common": "^2.0.2",
+    "spectrum-ts": "^12.11.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
