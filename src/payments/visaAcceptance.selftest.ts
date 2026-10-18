@@ -167,7 +167,7 @@ const markPaid = (inv: Inv) => void (inv.status = "PAID");
   check("create: signed request accepted (HMAC-SHA256 with digest)", s.sigOk && r.ok, { r, s: s.sigOk });
   check("create: invoice with deliveryMode none, sent now, no partial payments", s.body?.invoiceInformation?.deliveryMode === "none" && s.body.invoiceInformation.sendImmediately === true && s.body.invoiceInformation.allowPartialPayments === false, s.body?.invoiceInformation);
   check("create: amount as a 2-decimal string, currency upper-case", s.body?.orderInformation?.amountDetails?.totalAmount === "39.98" && s.body.orderInformation.amountDetails.currency === "USD");
-  check("create: one line item, quantity 1, no email anywhere", s.body?.orderInformation?.lineItems?.length === 1 && s.body.orderInformation.lineItems[0].quantity === 1 && !JSON.stringify(s.body).includes("@"));
+  check("create: not itemized, no customer details (Visa needs an email for those), no email anywhere", !("lineItems" in (s.body?.orderInformation ?? {})) && !("customerInformation" in (s.body ?? {})) && !JSON.stringify(s.body).includes("@"));
   check("create: reference (cleaned) in the description, only documented fields sent", /ref bridge-test1$/.test(s.body?.invoiceInformation?.description ?? "") && !("clientReferenceInformation" in (s.body ?? {})), s.body?.invoiceInformation?.description);
   check("create: returns id + https link", r.ok && /^\d+$/.test(r.id) && r.url.startsWith("https://businesscentertest.cybersource.com/"), r);
   if (r.ok) {
@@ -220,7 +220,7 @@ const markPaid = (inv: Inv) => void (inv.status = "PAID");
   const r = await pr;
   check("PAID → ok order with the Visa invoice id and amount", r.ok && r.orderId === `visa-inv-${lastInvoice().id}` && r.charged?.amount === 39.98 && r.charged.currency === "USD" && /^\d{4}-\d{2}-\d{2}$/.test(r.eta ?? ""), r);
   check("slot released after", !hasOpenMoneyPrompt(mei));
-  check("invoice is for the exact item and price", lastInvoice().total === 39.98 && lastInvoice().body.orderInformation.lineItems[0].productName === "Large-display blood pressure monitor");
+  check("invoice is for the exact item and price", lastInvoice().total === 39.98 && /Large-display blood pressure monitor/.test(lastInvoice().body.invoiceInformation.description));
 }
 
 // ── 3. "no" → link canceled, nothing bought ──────────────────────────────────

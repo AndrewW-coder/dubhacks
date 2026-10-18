@@ -8,7 +8,7 @@ The Visa track ("Reimagine Shopping") scores track fit at 30%. Until now checkou
 ## Flow
 1. The family votes; the buyer is chosen as before (`shopFlow.ts`).
 2. `checkout()` validates the price and runs the scam check exactly as before (a guard must OK gift cards for elders, etc.).
-3. `SHOP_MODE=paylink`: instead of the "❤️ or yes" question, Bridge creates a **Visa Acceptance invoice** for the exact item and price (`POST /invoicing/v2/invoices`, `deliveryMode: "none"`, `sendImmediately: true`, no partial payments, no email) and texts the buyer:
+3. `SHOP_MODE=paylink`: instead of the "❤️ or yes" question, Bridge creates a **Visa Acceptance invoice** for the exact item and price (`POST /invoicing/v2/invoices`, `deliveryMode: "none"`, `sendImmediately: true`, no partial payments; not itemized and no customer details, since Visa requires an email for itemized invoices; the product is named in the description) and texts the buyer:
    ```
    💳 B · Big-Digit Upper Arm Blood Pressure Monitor · $39.98 for Nai Nai · Golden Years Health Co.
    To buy it, pay on Visa's secure checkout page below and I'll order it as soon as it's paid. Reply "no" to cancel. Visa test mode: use a test card, no real money.
@@ -46,3 +46,6 @@ Pay by Link reports a payment only through a webhook, which needs a public HTTPS
 
 ## Independent review (applied)
 A separate reviewer found no way for real money to move and no order reported without PAID. Fixed from its findings: cancel retries + `maybeCharged` when a link can't be closed; cancel the invoice if the link can't be sent; "reply no to this message or 👎 it" wording; USD invoices; local test server only with `VISA_ACCEPTANCE_ALLOW_LOCAL=1`.
+
+## Live sandbox run (Sun 18 Oct)
+Against `apitest.cybersource.com` with the team's sandbox merchant: signature accepted; create → CREATED with a real `ebc2test.cybersource.com` checkout link; status read; cancel → CANCELED. Two fixes came out of it: `Accept: application/json` (the API answers 406 to `application/hal+json`), and no line items (itemized invoices require a customer email).

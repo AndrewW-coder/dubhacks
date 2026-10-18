@@ -95,10 +95,12 @@ export async function createPayLink(req: PayLinkRequest): Promise<PayLinkResult>
   if (typeof s === "string") return { ok: false, error: s };
   if (!(req.amount > 0) || !Number.isFinite(req.amount)) return { ok: false, error: "the amount isn't valid" };
   const amount = money(req.amount, req.currency);
+  // Not itemized, and no customer details: Visa requires a customer email for itemized invoices,
+  // and Bridge never gives Visa anyone's email. The product is named in the description, which
+  // Visa shows on its checkout page.
   const body = {
-    ...(req.customerName ? { customerInformation: { name: clip(req.customerName, 60) } } : {}),
     invoiceInformation: {
-      description: clip(`${req.description} · ref ${req.reference.replace(/[^A-Za-z0-9-]/g, "")}`, 200),
+      description: clip(`${req.description} · ${req.productName}${req.productSku ? ` (${req.productSku})` : ""} · ref ${req.reference.replace(/[^A-Za-z0-9-]/g, "")}`, 200),
       dueDate: tomorrow(),
       sendImmediately: true,
       deliveryMode: "none", // Visa sends no email; Bridge texts the link itself
@@ -106,15 +108,6 @@ export async function createPayLink(req: PayLinkRequest): Promise<PayLinkResult>
     },
     orderInformation: {
       amountDetails: { totalAmount: amount, currency: req.currency.toUpperCase() },
-      lineItems: [
-        {
-          productSku: clip((req.productSku || req.reference).replace(/[^A-Za-z0-9-]/g, "") || "item", 30),
-          productName: clip(req.productName, 60),
-          quantity: 1,
-          unitPrice: amount,
-          totalAmount: amount,
-        },
-      ],
     },
   };
   const r = await call(s, "POST", "/invoicing/v2/invoices", body);
@@ -192,7 +185,7 @@ export function signedHeaders(s: Pick<Settings, "merchantId" | "keyId" | "secret
     Date: date,
     Host: host,
     ...(digest ? { Digest: digest, "Content-Type": "application/json" } : {}),
-    Accept: "application/hal+json;charset=utf-8",
+    Accept: "application/json", // the invoicing API answers 406 to application/hal+json
     Signature: `keyid="${s.keyId}", algorithm="HmacSHA256", headers="${names.join(" ")}", signature="${signature}"`,
   };
 }
