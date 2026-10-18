@@ -141,6 +141,13 @@ check("tally tie → earliest", tally(new Map([["a", 2], ["b", 0]]), 3) === 0);
 check("tally none → null", tally(new Map(), 3) === null);
 check("buyer: elder asks → trusted Mei", pickBuyer(family, nainai, nainai)?.id === "mei");
 check("buyer: Kevin asks for Nai Nai → Kevin", pickBuyer(family, kevin, nainai)?.id === "kevin");
+process.env.SHOP_BUYER = "kevin";
+check("SHOP_BUYER=kevin: elder asks → Kevin pays (not trusted Mei)", pickBuyer(family, nainai, nainai)?.id === "kevin");
+check("SHOP_BUYER=kevin: Mei asks for Nai Nai → still Kevin", pickBuyer(family, mei, nainai)?.id === "kevin");
+check("SHOP_BUYER never makes the recipient pay", pickBuyer(family, nainai, kevin)?.id !== "kevin");
+process.env.SHOP_BUYER = "Nai Nai";
+check("SHOP_BUYER can't be an elder → normal rule", pickBuyer(family, nainai, nainai)?.id === "mei");
+delete process.env.SHOP_BUYER;
 
 // ── 1. Natural message → false (relayed), cards in both languages, URL untranslated ──
 let bCardKevin = "";

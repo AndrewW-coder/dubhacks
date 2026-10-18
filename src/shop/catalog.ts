@@ -138,6 +138,12 @@ const NOT_SHOPPING = { test: (t: string) => NOT_SHOPPING_WORDS.test(t) || GIFT_C
 // Strong triggers: an explicit request to buy/find something.
 const STRONG = /想买|想買|帮我找|幫我找|帮我买|幫我買|买个|買個|买一[个個台件双雙]|買一[个個台件双雙]|想要[一个個台]*|\bwant(s)? to buy\b|\b(find|buy|get|order)\b.{1,60}\bfor\b|\b(find|buy|order)\s+(?:[\w']+\s+){0,3}(a|an|some|new)\s+\w+|\bneed(s)? a new\b|\blooking for an?\b|\bshop(ping)? for\b/i;
 // Weak triggers: only count with a known object ("我的血压计坏了", "my kettle broke", "需要一个热水壶").
+// Possible shopping, for the AI to decide when no known product word matched ("我的眼镜坏了",
+// "可以帮我买个电热毯吗", "can we get grandma a new phone?"). Only used when an AI key is set, so
+// everyday chat ("I'll get home late") stays cheap: each phrase needs a buy/need/broken cue.
+const MAYBE =
+  /想买|想買|想要|想换|想換|换个|換個|换一|換一|帮我买|幫我買|帮我找|幫我找|帮我看看|幫我看看|买个|買個|买一|買一|买双|買雙|买件|買件|买台|買台|需要|坏了|壞了|不能用|不灵|不靈|有没有.{0,12}(好|推荐|推薦)|有沒有.{0,12}(好|推荐|推薦)|哪个.{0,12}好|哪個.{0,12}好|推荐|推薦|\b(buy|order|purchase|shop for)\b|\bget (her|him|them|grandma|grandpa|nai ?nai|ye ?ye|mom|dad|a|an|some|new)\b|\b(broke|broken|stopped working|doesn'?t work|not working)\b|\bneed(s)? (a|an|new|some|another)\b|\blooking for\b|\brecommend\b|\breplace\b|\b(gift|present)s?\b|\bideas? for\b|礼物|禮物|送.{0,6}什么|送.{0,6}什麼/i;
+
 const WEAK = /坏了|壞了|不能用|不灵|不靈|需要|缺|\bbroke(n)?\b|\bstopped working\b|\bdoesn'?t work\b|\bneed(s)? an?\b|\bran out of\b/i;
 
 const RELATION_WORDS: [RegExp, (m: FamilyMember) => boolean][] = [
@@ -274,7 +280,10 @@ const strings = (v: unknown, max: number): string[] =>
 /** A shopping need in `text`, or null. Cheap regex first; the AI only sees likely candidates. Never throws. */
 export async function detectShoppingNeed(family: Family, sender: FamilyMember, text: string): Promise<ShoppingNeed | null> {
   try {
-    const quick = quickNeed(family, sender, text ?? "");
+    let quick = quickNeed(family, sender, text ?? "");
+    // No known product word: let the AI decide, if there's a buying / need / broken cue at all.
+    const aiOnly = !quick && hasClaude() && MAYBE.test(text ?? "") && !NOT_SHOPPING.test(text ?? "");
+    if (!quick && aiOnly) quick = { forMember: defaultRecipient(family, sender, (text ?? "").trim()), text: (text ?? "").trim(), category: "other" };
     if (!quick) return null;
     if (!hasClaude()) return quick;
     let d: Detected;
@@ -282,7 +291,8 @@ export async function detectShoppingNeed(family: Family, sender: FamilyMember, t
       d = await callTool<Detected>({
         system:
           "You read one message from a family group chat (Chinese and English speakers) and decide if someone wants to buy a product. " +
-          "Rent, bills, sending money, gift cards and things already bought are NOT shopping. " +
+          "It IS shopping when someone wants, needs or asks for help choosing a product: a broken thing to replace, 'can you buy…', 'which … is good?', or 'what should we get grandma for her birthday?' (gift ideas: use gift keywords such as 'birthday gift for grandmother'). " +
+            "Rent, bills, sending money, gift cards and things already bought are NOT shopping. " +
           "If the sender is an elder talking about her own broken or missing item, it is for her. " +
           "Write keywordsEn as concise English Google Shopping queries. Translate Chinese wishes like 字要大 into mustHave 'large display'.",
         content: JSON.stringify({
@@ -295,7 +305,7 @@ export async function detectShoppingNeed(family: Family, sender: FamilyMember, t
       });
     } catch (err) {
       console.warn(`[shop] need extraction failed (${err instanceof Error ? err.message : err}); using keywords`);
-      return quick;
+      return aiOnly ? null : quick; // nothing to search for without the AI's keywords
     }
     if (!d || d.isShopping !== true) return null;
     const forMember = family.members.find((m) => m.id === d.forMemberId) ?? quick.forMember;
@@ -310,6 +320,7 @@ export async function detectShoppingNeed(family: Family, sender: FamilyMember, t
     const must = strings(d.mustHave, 5);
     if (must.length || quick.mustHave) need.mustHave = must.length ? must : quick.mustHave;
     if (!need.keywordsEn?.length) delete need.keywordsEn;
+    if (aiOnly && !need.keywordsEn) return null; // the AI said shopping but named nothing to search for
     return need;
   } catch (err) {
     console.warn(`[shop] detectShoppingNeed failed: ${err instanceof Error ? err.message : err}`);

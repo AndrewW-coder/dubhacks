@@ -207,6 +207,22 @@ async function main() {
   check("AI error → regex fallback", a2?.keywordsEn?.[0] === "blood pressure monitor", a2);
   llmMode = "ok";
 
+  // 3b. Products the keyword list doesn't know: with an AI key, a buying / broken cue goes to the AI.
+  for (const [who, t] of [[nainai, "我的眼镜坏了"], [nainai, "可以帮我买个电热毯吗"], [nainai, "家里的吹风机坏了"], [nainai, "我想换个新的电饭锅"], [kevin, "can we get grandma a new phone?"], [kevin, "grandma's hair dryer broke"], [nainai, "帮我看看哪个空气净化器好"], [kevin, "any ideas for a gift for nai nai?"], [kevin, "我们送奶奶什么好"]] as const) {
+    llmRequests.length = 0;
+    const n = await detectShoppingNeed(family, who, t);
+    check(`AI-only: "${t}" → asked the AI → a need with keywords`, llmRequests.length === 1 && !!n?.keywordsEn?.length, n);
+  }
+  llmMode = "notShopping";
+  check("AI-only: the AI says no → null", (await detectShoppingNeed(family, nainai, "我的眼镜坏了")) === null);
+  llmMode = "error";
+  check("AI-only: AI error → null (no keywords to search)", (await detectShoppingNeed(family, nainai, "我的眼镜坏了")) === null);
+  llmMode = "ok";
+  llmRequests.length = 0;
+  for (const t of ["I'll get home late tonight", "我今天很好", "happy new year everyone", "can you call me later", "我需要交房租"]) {
+    check(`AI-only: no cue / not shopping "${t}" → no AI call`, (await detectShoppingNeed(family, kevin, t)) === null && llmRequests.length === 0);
+  }
+
   // 4. SerpApi mapping + cache
   clearSearchCache();
   serpMode = "ok";

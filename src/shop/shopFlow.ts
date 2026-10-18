@@ -301,6 +301,13 @@ async function buyerPicks(family: Family, buyer: FamilyMember, forMember: Family
 
 /** The requester if they can pay (not an elder, not the recipient), else a trusted member, else the first non-elder. */
 export function pickBuyer(family: Family, requester: FamilyMember, forMember: FamilyMember): FamilyMember | undefined {
+  // SHOP_BUYER (a member id or name, e.g. "kevin"): always this person pays and gets the Visa link,
+  // e.g. when only some members have a phone on Bridge. Never an elder, never the recipient.
+  const fixed = process.env.SHOP_BUYER?.trim().toLowerCase();
+  if (fixed) {
+    const m = family.members.find((x) => x.id.toLowerCase() === fixed || x.name.toLowerCase() === fixed);
+    if (m && !isElder(m) && m.id !== forMember.id) return m;
+  }
   if (!isElder(requester) && requester.id !== forMember.id) return requester;
   const trusted = trustedConfirmers(family, forMember, forMember)[0];
   return trusted ?? family.members.find((m) => !isElder(m) && m.id !== forMember.id);
