@@ -29,14 +29,20 @@
 //      else "Mei ordered a new blood pressure monitor for Nai Nai", in each language
 //   6. one open decision per family; every failure ends with a clear message and nothing ordered
 //
+// AI budget (spec U2-15): everything one reader sees in one step (heading + every card's name,
+//   summary and "demo product" label; later the vote result line) is translated in ONE
+//   translateBatch call per reader per step. Prices, merchants, ratings and URLs are never sent
+//   for translation, nor a product name the product already has in the reader's language.
+//   English readers cost no call at all. Main demo flow (1 Chinese + 2 English readers): 8
+//   translation calls before, 3 after (cards, vote result, order confirmation).
+//
 // No settings of its own (SHOP_VOTE_TIMEOUT_MS is read in u1.ts).
 
 import { sendText } from "../photon/client.js";
 import { ask } from "../relay/prompts.js";
-import { BRIDGE } from "../relay/say.js";
-import { translate } from "../translate/translator.js";
+import { translateBatch } from "../translate/translator.js";
 import { isEmergency } from "../translate/confidence.js";
-import { localize, paymentFailedText, say } from "../payments/flow.js";
+import { paymentFailedText } from "../payments/flow.js";
 import { isMoneyOnlyNeed } from "../payments/needs.js";
 import { isElder, scamSignals, trustedConfirmers } from "../payments/scamCheck.js";
 import { formatMoney, isSupportedCurrency, quote } from "../payments/visa.js";
@@ -101,11 +107,11 @@ export async function tryHandleShopping(family: Family, sender: FamilyMember, ms
     const r = await startDecision(family, sender, need, { explicit: true });
     if (r.status === "started") return await r.cardsOut; // true only once the cards are going out
     if (r.status === "busy") {
-      void say(sender, `I'm still helping the family choose ${r.what} for ${r.forMember.name}, so I shared your message with everyone. Ask me again once that's done 🙂`, family).catch(() => {});
+      void tell(sender, `I'm still helping the family choose ${r.what} for ${r.forMember.name}, so I shared your message with everyone. Ask me again once that's done 🙂`, family).catch(() => {});
     } else if (need.category !== "other") {
       // A real product with nothing that fits. No money suggestion here: real needs get the
       // money offer from payments/needs.ts.
-      void say(sender, `I couldn't find a good option for ${need.forMember.id === sender.id ? "you" : need.forMember.name}, so I shared your message with the family.`, family).catch(() => {});
+      void tell(sender, `I couldn't find a good option for ${need.forMember.id === sender.id ? "you" : need.forMember.name}, so I shared your message with the family.`, family).catch(() => {});
     }
     return false; // relayed as chat
   } catch (err) {
@@ -190,7 +196,7 @@ async function runDecision(
   const forMember = need.forMember;
   const voters = family.members;
   const card: VoteCard = async (reader: FamilyMember) => {
-    const parts = [await heading(family, reader, requester, forMember, decision.what, options.length), ...(await Promise.all(options.map((o, i) => optionCard(family, reader, o, i))))];
+    const parts = await cardsFor(family, reader, requester, forMember, decision.what, options);
     setImmediate(() => cardsReady(true)); // after the vote starts sending them
     return parts;
   };
@@ -198,7 +204,7 @@ async function runDecision(
   const result = await shopDeps.familyVote(family, voters, card, options.length, voteTimeoutMs());
   const buyer = pickBuyer(family, requester, forMember);
   if (!buyer) {
-    await Promise.all(voters.map((m) => say(m, "There's nobody in the family who can pay for this, so I didn't buy anything.", family)));
+    await Promise.all(voters.map((m) => tell(m, "There's nobody in the family who can pay for this, so I didn't buy anything.", family)));
     return;
   }
 
@@ -208,7 +214,7 @@ async function runDecision(
   if (winner === null || winner < 0 || winner >= options.length) {
     winner = await buyerPicks(family, buyer, forMember, options); // a letter: still confirmed (b)
     if (winner === null) {
-      await Promise.all(voters.map((m) => say(m, `Nobody picked an option, so I didn't buy anything for ${forMember.name}.`, family)));
+      await Promise.all(voters.map((m) => tell(m, `Nobody picked an option, so I didn't buy anything for ${forMember.name}.`, family)));
       return;
     }
   } else {
@@ -216,7 +222,14 @@ async function runDecision(
     const confirm = await buyerMustConfirm(buyer, options[winner]!.product, buyerAgreed);
     const n = [...result.votes.values()].filter((v) => v === winner).length;
     await Promise.all(
-      voters.map(async (m) => sendText(m.handle, `🗳️ ${LETTERS[winner!]} · ${await localName(family, m, options[winner!]!.product)}\n${await localize(winnerSentence(n, m, buyer, forMember, confirm), m, family)}`)),
+      voters.map(async (m) => {
+        // One call per reader: the product name (only if it has none in their language) + the sentence.
+        const p = options[winner!]!.product;
+        const own = ownName(m, p);
+        const sentence = winnerSentence(n, m, buyer, forMember, confirm);
+        const t = await translateBatch(own ? [sentence] : [englishName(p), sentence], m, family);
+        await sendText(m.handle, `🗳️ ${LETTERS[winner!]} · ${own ?? t[0]}\n${t[t.length - 1]}`);
+      }),
     );
   }
 
@@ -230,12 +243,12 @@ async function runDecision(
     const own = order.maybeCharged
       ? error && /may have gone through/i.test(error) ? error : paymentFailedText(order)
       : error || "The purchase didn't go through, so nothing was bought.";
-    await say(buyer, own, family);
+    await tell(buyer, own, family);
     const others = voters.filter((m) => m.id !== buyer.id);
     const line = order.maybeCharged
       ? `${buyer.name}'s purchase may have gone through; ${buyer.name} is checking. I'll let you know.`
       : `The purchase didn't go through, so nothing was ordered for ${forMember.name}.`;
-    await Promise.all(others.map((m) => say(m, line, family)));
+    await Promise.all(others.map((m) => tell(m, line, family)));
     return;
   }
   const isGift = need.category === "gift" || Boolean(need.occasion);
@@ -262,7 +275,7 @@ async function buyerPicks(family: Family, buyer: FamilyMember, forMember: Family
   const deadline = Date.now() + voteTimeoutMs();
   let question = `Nobody voted for ${forMember.name}'s options. Which one should I buy? Reply with a letter (${letters}), or "no" to skip.`;
   for (let i = 0; i < PICK_TRIES && Date.now() < deadline; i++) {
-    const a = await ask(buyer.handle, await localize(question, buyer, family), Math.max(1, deadline - Date.now()));
+    const a = await ask(buyer.handle, await localizeOne(question, buyer, family), Math.max(1, deadline - Date.now()));
     if (!a) return null;
     if (a.via === "text") {
       const pick = parseVote(a.text, options.length);
@@ -293,7 +306,15 @@ function describe(need: ShoppingNeed): string {
   return `something (${need.category.replace(/[-_]/g, " ")})`;
 }
 
-async function heading(family: Family, reader: FamilyMember, requester: FamilyMember, forMember: FamilyMember, what: string, n: number): Promise<string> {
+/** Bridge's English line in the reader's language (one batch call; none for English readers). */
+async function localizeOne(text: string, reader: FamilyMember, family: Family): Promise<string> {
+  return (await translateBatch([text], reader, family))[0] ?? text;
+}
+async function tell(to: FamilyMember, text: string, family: Family): Promise<void> {
+  await sendText(to.handle, await localizeOne(text, to, family));
+}
+
+function headingSentence(reader: FamilyMember, requester: FamilyMember, forMember: FamilyMember, what: string, n: number): string {
   const letters = LETTERS.slice(0, n);
   const lettersText = letters.length > 1 ? `${letters.slice(0, -1).join(", ")} or ${letters[letters.length - 1]}` : letters[0]!;
   const forYou = reader.id === forMember.id;
@@ -301,34 +322,67 @@ async function heading(family: Family, reader: FamilyMember, requester: FamilyMe
     requester.id === forMember.id
       ? forYou ? `You'd like ${what}.` : `${forMember.name} wants ${what}.`
       : requester.id === reader.id ? `You asked me to find ${what} for ${forMember.name}.` : `${requester.name} asked me to find ${what} for ${forYou ? "you" : forMember.name}.`;
-  const sentence = `${lead} ${n === 1 ? "Here is 1 option" : `Here are ${n} options`}; reply ${lettersText}, or tapback ${ICONS.slice(0, n).join("/")}. Feel free to talk it over first.`;
-  const legend = letters.map((l, i) => `${ICONS[i]} ${l}`).join(" · ");
-  return `🛍️ ${await localize(sentence, reader, family)}\n${legend}`;
+  return `${lead} ${n === 1 ? "Here is 1 option" : `Here are ${n} options`}; reply ${lettersText}, or tapback ${ICONS.slice(0, n).join("/")}. Feel free to talk it over first.`;
 }
 
-/** One option card. Names/prices/links are never run through the translator; the URL is alone on the last line. */
+/**
+ * The heading + one card per option for one reader, translated in ONE translateBatch call:
+ * the heading sentence, names the product lacks in the reader's language, the summaries and the
+ * "demo product" label. Prices (quote(), no AI), merchants, ratings and URLs are added as they are.
+ */
+async function cardsFor(family: Family, reader: FamilyMember, requester: FamilyMember, forMember: FamilyMember, what: string, options: Option[]): Promise<string[]> {
+  const n = options.length;
+  const texts: string[] = [];
+  const slot = (t: string) => texts.push(t) - 1;
+  const head = slot(headingSentence(reader, requester, forMember, what, n));
+  const own = options.map((o) => ownName(reader, o.product));
+  const nameAt = options.map((o, i) => (own[i] === undefined ? slot(englishName(o.product)) : -1));
+  const blurbAt = options.map((o) => slot(summary(o)));
+  const demoAt = options.some((o) => !linkOf(o.product)) ? slot("demo product") : -1;
+  const [t, prices] = await Promise.all([translateBatch(texts, reader, family), Promise.all(options.map((o) => priceFor(reader, o.product)))]);
+  const legend = LETTERS.slice(0, n).map((l, i) => `${ICONS[i]} ${l}`).join(" · ");
+  return [
+    `🛍️ ${t[head]}\n${legend}`,
+    ...options.map((o, i) => renderCard(o, i, own[i] ?? t[nameAt[i]!]!, prices[i]!, t[blurbAt[i]!]!, demoAt >= 0 ? t[demoAt]! : "demo product")),
+  ];
+}
+
+/** One option card on its own (one batch call). Names/prices/links are never translated; the URL is alone on the last line. */
 export async function optionCard(family: Family, reader: FamilyMember, option: Option, index: number): Promise<string> {
   const p = option.product;
-  const [name, price, blurb] = await Promise.all([localName(family, reader, p), priceFor(reader, p), localize(summary(option), reader, family)]);
-  const link = p.url && /^https?:\/\/\S+$/i.test(p.url.trim()) ? p.url.trim() : `(${await localize("demo product", reader, family)})`;
+  const own = ownName(reader, p);
+  const texts = [summary(option), "demo product", ...(own === undefined ? [englishName(p)] : [])];
+  const [t, price] = await Promise.all([translateBatch(texts, reader, family), priceFor(reader, p)]);
+  return renderCard(option, index, own ?? t[2]!, price, t[0]!, t[1]!);
+}
+
+function renderCard(option: Option, index: number, name: string, price: string, blurb: string, demoLabel: string): string {
+  const p = option.product;
+  const link = linkOf(p) ?? `(${demoLabel})`;
   const rating = typeof p.rating === "number" ? ` · ⭐ ${p.rating}${typeof p.reviews === "number" ? ` (${p.reviews})` : ""}` : "";
   return `${LETTERS[index]} · ${name}\n${price} · ${p.merchant}${rating}\n${blurb}\n${link}`;
+}
+
+function linkOf(p: Product): string | undefined {
+  return p.url && /^https?:\/\/\S+$/i.test(p.url.trim()) ? p.url.trim() : undefined;
 }
 
 function summary(o: Option): string {
   const d = (o.product.description ?? "").replace(/\s+/g, " ").trim();
   const first = d.match(/^.{0,160}?[.!?。！？](\s|$)/)?.[0]?.trim() ?? (d.length > 160 ? `${d.slice(0, 157)}…` : d);
   const why = o.why?.trim() ?? "";
-  const same = (a: string, b: string) => a.replace(/[.!?。！？\s]+$/u, "").toLowerCase() === b.replace(/[.!?。！？\s]+$/u, "").toLowerCase();
-  return first && why && same(first, why) ? why : [first, why].filter(Boolean).join(" ");
+  // The tailored "why" already says what matters for this person; adding the store's own blurb repeats it.
+  return why || first;
 }
 
-async function localName(family: Family, reader: FamilyMember, p: Product): Promise<string> {
+/** The product's own name in the reader's language (or English for English readers); undefined = needs translating. */
+function ownName(reader: FamilyMember, p: Product): string | undefined {
   const own = p.name[reader.language] ?? p.name[reader.language.split("-")[0]!];
   if (own) return own;
-  const en = p.name.en ?? Object.values(p.name)[0] ?? p.id;
-  if (reader.language === "en") return en;
-  return (await translate(en, BRIDGE, reader, family)).text;
+  return reader.language === "en" ? englishName(p) : undefined;
+}
+function englishName(p: Product): string {
+  return p.name.en ?? Object.values(p.name)[0] ?? p.id;
 }
 
 async function priceFor(reader: FamilyMember, p: Product): Promise<string> {

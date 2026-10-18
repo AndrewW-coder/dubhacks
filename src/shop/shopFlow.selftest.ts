@@ -432,6 +432,136 @@ let bCardKevin = "";
   reset();
 }
 
+// ── 10. AI call budget (spec U2-15): a fake OpenAI-compatible server counts every request ──
+// Main demo: Nai Nai's blood pressure monitor → Kevin ❤️ B + Nai Nai "B" → Mei yes → bought.
+// 1 Chinese reader (Nai Nai) + 2 English readers (Kevin, Mei).
+{
+  const http = await import("node:http");
+  type AiReq = { tool: string; content: string; items?: string[] };
+  const aiCalls: AiReq[] = [];
+  let batchMode: "ok" | "short" | "error" = "ok";
+  const server = http.createServer((req, res) => {
+    let raw = "";
+    req.on("data", (c) => (raw += c));
+    req.on("end", () => {
+      const reqBody = JSON.parse(raw || "{}");
+      const tool: string = reqBody.tools?.[0]?.function?.name ?? "";
+      const content = String(reqBody.messages?.find((x: { role: string }) => x.role === "user")?.content ?? "");
+      const send = (status: number, obj: unknown) => {
+        res.writeHead(status, { "content-type": "application/json" });
+        res.end(JSON.stringify(obj));
+      };
+      const reply = (args: unknown) =>
+        send(200, { choices: [{ message: { role: "assistant", content: null, tool_calls: [{ id: "c1", type: "function", function: { name: tool, arguments: JSON.stringify(args) } }] } }] });
+      const entry: AiReq = { tool, content };
+      aiCalls.push(entry);
+      if (tool === "submit_translation") return reply({ text: `[zh·1] ${content.match(/<message>([\s\S]*?)<\/message>/)?.[1] ?? ""}`, confidence: 0.95 });
+      if (tool === "submit_literal") return reply({ text: "[zh·lit]" });
+      if (tool === "submit_translations") {
+        let items: string[] = [];
+        try {
+          items = JSON.parse(content.match(/<items>([\s\S]*?)<\/items>/)?.[1] ?? "[]");
+        } catch {}
+        entry.items = items;
+        if (batchMode === "error") return send(500, { error: { message: "boom" } });
+        const out = items.map((t) => `[zh·b] ${t}`);
+        return reply({ items: batchMode === "short" ? out.slice(0, -1) : out });
+      }
+      if (tool === "money_intent") return reply({ isGift: false });
+      if (tool === "report_need") return reply({ isNeed: true, need: "a blood pressure monitor", suggestedAmountUSD: 38 });
+      return reply({});
+    });
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+  const port = (server.address() as { port: number }).port;
+  const saved = { p: process.env.TRANSLATE_PROVIDER, k: process.env.LLM_API_KEY, u: process.env.LLM_BASE_URL, m: process.env.LLM_MODEL };
+  process.env.TRANSLATE_PROVIDER = "openai-compatible";
+  process.env.LLM_API_KEY = "test-key";
+  process.env.LLM_BASE_URL = `http://127.0.0.1:${port}`;
+  process.env.LLM_MODEL = "fake-model";
+
+  const TRANSLATION_TOOLS = new Set(["submit_translation", "submit_literal", "submit_translations"]);
+  const translationCalls = () => aiCalls.filter((c) => TRANSLATION_TOOLS.has(c.tool));
+  const forReader = (who: FamilyMember) => translationCalls().filter((c) => c.content.includes(`<recipient>${who.name},`));
+
+  // Fresh wording (not cached by earlier placeholder runs): "a blood pressure monitor with big numbers".
+  const realDetect = shopDeps.detectShoppingNeed;
+  shopDeps.detectShoppingNeed = async (fam: Family, sender: FamilyMember, text: string) => {
+    const need = await realDetect(fam, sender, text);
+    return need ? { ...need, keywordsEn: ["blood pressure monitor with big numbers"] } : need;
+  };
+  reset();
+  aiCalls.length = 0;
+  const from = lines.length;
+  await tryHandlePayment(family, nainai, msg(nainai, "我想买一个血压计，字要大一点"));
+  const kB = idOf(await lineFor(kevin, "B · EasyPulse Talking Monitor", from));
+  await lineFor(mei, "C · CalmCuff", from);
+  const zB = await lineFor(nainai, "B · EasyPulse 语音血压计", from);
+  const zC = await lineFor(nainai, "C · ", from);
+  const cardsCalls = translationCalls().length;
+  tryResolvePrompt(tap(kevin, kB, "love"));
+  tryResolvePrompt(msg(nainai, "B"));
+  await lineFor(nainai, "🗳️ B · EasyPulse 语音血压计", from);
+  await lineFor(mei, "🛒 Buy B · EasyPulse", from);
+  const voteCalls = translationCalls().length - cardsCalls;
+  tryResolvePrompt(msg(mei, "yes"));
+  const done = await lineFor(nainai, "✅", from);
+  await settle();
+  const total = translationCalls().length;
+  const byTool = (t: string) => translationCalls().filter((c) => c.tool === t).length;
+  realLog(
+    `  [ai] main demo flow: ${total} translation calls (cards ${cardsCalls}, vote result ${voteCalls}, order ${total - cardsCalls - voteCalls}; ` +
+      `batch ${byTool("submit_translations")}, single ${byTool("submit_translation")}, literal ${byTool("submit_literal")}); ` +
+      `other AI calls: ${aiCalls.filter((c) => !TRANSLATION_TOOLS.has(c.tool)).map((c) => c.tool).join(", ") || "none"}`,
+  );
+  check("AI: whole demo flow ≤ 3 translation calls", total <= 3, String(total));
+  check("AI: English readers trigger no translation call", forReader(kevin).length === 0 && forReader(mei).length === 0);
+  check("AI: cards = one batch call for Nai Nai", cardsCalls === 1 && aiCalls.some((c) => c.tool === "submit_translations" && c.content.includes("<recipient>Nai Nai,")), String(cardsCalls));
+  check("AI: vote result = one call for Nai Nai", voteCalls === 1, String(voteCalls));
+  const zBb = body(zB);
+  check("AI: Nai Nai's card B summary from the batch", zBb[2]?.startsWith("[zh·b] ") === true, zBb.join(" | "));
+  check("AI: Nai Nai's card B: URL untouched on its own line", zBb.at(-1) === "https://example.com/bp-b?ref=demo&x=1", zBb.join(" | "));
+  check("AI: Nai Nai's card B: price line untouched", /^≈ NT\$1,28\d · SilverCare Demo · ⭐ 4\.6 \(812\)$/.test(zBb[1] ?? ""), zBb.join(" | "));
+  check("AI: own-language name kept, untranslated", zBb[0]?.endsWith("B · EasyPulse 语音血压计") === true, zBb[0] ?? "");
+  check("AI: missing zh name translated in the batch", body(zC)[0]?.endsWith("C · [zh·b] CalmCuff Wrist Monitor") === true, body(zC).join(" | "));
+  const sent = aiCalls.flatMap((c) => c.items ?? []);
+  check("AI: no URL or price is ever sent for translation", sent.length > 0 && !sent.some((t) => /https?:\/\/|NT\$|\$\d|SilverCare Demo · /.test(t)), JSON.stringify(sent));
+  check("AI: names with a zh translation are not sent", !sent.some((t) => /EasyPulse Talking Monitor|VitaCheck Arm/.test(t)), JSON.stringify(sent));
+  check("AI: the order is confirmed to Nai Nai", Boolean(done), dump(from));
+  shopDeps.detectShoppingNeed = realDetect;
+
+  // translateBatch unit checks.
+  const { translateBatch } = await import("../translate/translator.js");
+  aiCalls.length = 0;
+  const en = await translateBatch(["Hello there", "https://example.com/x"], kevin, family);
+  check("batch: English reader → input as is, no call", JSON.stringify(en) === JSON.stringify(["Hello there", "https://example.com/x"]) && aiCalls.length === 0);
+  const ok = await translateBatch(["Pick one, please.", "https://example.com/x", "", "Pick one, please.", "Thanks!"], nainai, family);
+  check("batch: one call, order kept, links/blanks untouched, duplicates sent once",
+    aiCalls.length === 1 && JSON.stringify(aiCalls[0]!.items) === JSON.stringify(["Pick one, please.", "Thanks!"]) &&
+      JSON.stringify(ok) === JSON.stringify(["[zh·b] Pick one, please.", "https://example.com/x", "", "[zh·b] Pick one, please.", "[zh·b] Thanks!"]), JSON.stringify(ok));
+  aiCalls.length = 0;
+  const again = await translateBatch(["Thanks!", "Pick one, please."], nainai, family);
+  check("batch: cached per item → no call", aiCalls.length === 0 && again[0] === "[zh·b] Thanks!", JSON.stringify(again));
+  batchMode = "short";
+  aiCalls.length = 0;
+  const short = await translateBatch(["One more thing.", "And another."], nainai, family);
+  check("batch: length mismatch → per-item translate() fallback",
+    JSON.stringify(short) === JSON.stringify(["[zh·1] One more thing.", "[zh·1] And another."]) && aiCalls.filter((c) => c.tool === "submit_translation").length === 2, JSON.stringify(short));
+  batchMode = "error";
+  aiCalls.length = 0;
+  const err = await translateBatch(["Something new."], nainai, family);
+  check("batch: provider error → per-item fallback, never throws", err[0] === "[zh·1] Something new.", JSON.stringify(err));
+  batchMode = "ok";
+
+  server.close();
+  process.env.TRANSLATE_PROVIDER = saved.p;
+  process.env.LLM_API_KEY = saved.k ?? "";
+  process.env.LLM_BASE_URL = saved.u ?? "";
+  process.env.LLM_MODEL = saved.m ?? "";
+  if (saved.u === undefined) delete process.env.LLM_BASE_URL;
+  if (saved.m === undefined) delete process.env.LLM_MODEL;
+}
+
 console.log = realLog;
 console.warn = realWarn;
 console.log(failures ? `\n${failures} failed, ${passes} passed` : `shopFlow.selftest: all ${passes} checks passed`);

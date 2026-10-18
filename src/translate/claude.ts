@@ -21,6 +21,12 @@
 //   LLM_REASONING_EFFORT   low | medium | high | none (Gemini default "low": fast; Gemini 3 can't use "none")
 //   LLM_TIMEOUT_MS         per call, default 20000
 //   ANTHROPIC_API_KEY / ANTHROPIC_MODEL / ANTHROPIC_BASE_URL  for the anthropic provider.
+//
+// callAudio() (added for media/voice.ts): sends an audio clip as an OpenAI-style `input_audio`
+// content part through the same Gemini/OpenAI-compatible path, so it shares the model fallback,
+// quota memory and 429/503 retry above. Docs (checked 2026-10):
+//   https://ai.google.dev/gemini-api/docs/openai   (input_audio {data: base64, format: "wav"})
+//   https://ai.google.dev/gemini-api/docs/audio    (20 MB total inline request, 32 tokens/s of audio)
 
 import Anthropic from "@anthropic-ai/sdk";
 import { config } from "../config.js";
@@ -95,12 +101,50 @@ async function callAnthropic<T>(opts: { system: string; content: UserContent; to
   return block.input as T;
 }
 
+// ── Audio (Gemini / OpenAI-compatible only) ───────────────────────────────
+
+/**
+ * Sends `audio` (base64 in `format`) plus a text prompt, asks for `tool`, and returns its input.
+ * If the model answers in plain text instead of calling the tool, the text is returned as
+ * `{ [textKey]: text }` when `textKey` is given. Throws like callTool (callers decide the fallback).
+ */
+export async function callAudio<T>(opts: {
+  system: string;
+  prompt: string;
+  audio: { data: string; format: "wav" | "mp3" };
+  tool: Tool;
+  textKey?: string;
+  timeoutMs?: number;
+  model?: string;
+}): Promise<T> {
+  const p = provider();
+  if (p !== "gemini" && p !== "openai-compatible") throw new Error(`audio input isn't supported for provider "${p}"`);
+  return callOpenAICompatible<T>(
+    {
+      system: opts.system,
+      content: opts.prompt,
+      tool: opts.tool,
+      model: opts.model,
+      openaiContent: [
+        { type: "text", text: opts.prompt },
+        { type: "input_audio", input_audio: { data: opts.audio.data, format: opts.audio.format } },
+      ],
+      textKey: opts.textKey,
+      timeoutMs: opts.timeoutMs,
+    },
+    p,
+  );
+}
+
 // ── OpenAI-compatible (Gemini, OpenAI, Groq, OpenRouter, DeepSeek, Ollama…) ─
+
+/** Internal extras used by callAudio(); callTool() never sets them. */
+type CompatExtras = { openaiContent?: unknown; textKey?: string; timeoutMs?: number };
 
 let workingGeminiModel: string | undefined; // remembered after the first successful fallback
 
 async function callOpenAICompatible<T>(
-  opts: { system: string; content: UserContent; tool: Tool; maxTokens?: number; model?: string },
+  opts: { system: string; content: UserContent; tool: Tool; maxTokens?: number; model?: string } & CompatExtras,
   p: "gemini" | "openai-compatible",
 ): Promise<T> {
   const configured = opts.model ?? env("LLM_MODEL");
@@ -153,7 +197,7 @@ function parseRetryDelay(text: string): number {
 }
 
 async function chatWithTool<T>(
-  opts: { system: string; content: UserContent; tool: Tool; maxTokens?: number },
+  opts: { system: string; content: UserContent; tool: Tool; maxTokens?: number } & CompatExtras,
   p: "gemini" | "openai-compatible",
   model: string,
 ): Promise<T> {
@@ -166,7 +210,7 @@ async function chatWithTool<T>(
         role: "system",
         content: `${opts.system}\n\nAlways answer by calling the function "${opts.tool.name}" exactly once, with arguments that match its schema. Do not reply with plain text.`,
       },
-      { role: "user", content: toOpenAIContent(opts.content) },
+      { role: "user", content: opts.openaiContent ?? toOpenAIContent(opts.content) },
     ],
     tools: [{ type: "function", function: { name: opts.tool.name, description: opts.tool.description, parameters: opts.tool.input_schema } }],
     // Gemini's compatibility layer documents "auto"; a single tool + the instruction above makes it call it.
@@ -177,10 +221,13 @@ async function chatWithTool<T>(
   // No max_tokens for Gemini: its thinking tokens count against the limit and can truncate the answer.
   if (p !== "gemini" && opts.maxTokens) body.max_tokens = opts.maxTokens;
 
-  const res = await postJson(`${base}/chat/completions`, body);
+  const res = await postJson(`${base}/chat/completions`, body, 1, opts.timeoutMs);
   const msg = res?.choices?.[0]?.message;
   const call = msg?.tool_calls?.find((c: { function?: { name?: string } }) => c?.function?.name === opts.tool.name) ?? msg?.tool_calls?.[0];
   const raw: unknown = call?.function?.arguments ?? extractJson(msg?.content);
+  if ((raw === undefined || raw === null || raw === "") && opts.textKey && typeof msg?.content === "string") {
+    return { [opts.textKey]: msg.content.trim() } as T; // plain-text answer accepted (callAudio only)
+  }
   if (raw === undefined || raw === null || raw === "") throw new Error("the model did not call the tool");
   const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
   if (!parsed || typeof parsed !== "object") throw new Error("the model returned non-object arguments");
@@ -212,9 +259,9 @@ function extractJson(text: unknown): unknown {
   return start >= 0 && end > start ? candidate.slice(start, end + 1) : undefined;
 }
 
-async function postJson(url: string, body: unknown, attempt = 1): Promise<any> {
+async function postJson(url: string, body: unknown, attempt = 1, timeoutMs?: number): Promise<any> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), Number(env("LLM_TIMEOUT_MS")) || 20_000);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs || Number(env("LLM_TIMEOUT_MS")) || 20_000);
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -231,7 +278,7 @@ async function postJson(url: string, body: unknown, attempt = 1): Promise<any> {
       const wait = Math.min(retryAfterMs || 2000, 10_000);
       console.warn(`[ai] ${res.status} from provider, retrying in ${Math.round(wait / 1000)}s`);
       await new Promise((r) => setTimeout(r, wait));
-      return postJson(url, body, 2);
+      return postJson(url, body, 2, timeoutMs);
     }
     const detail = text.slice(0, 300).replace(/\s+/g, " ");
     if (res.status === 503 || res.status === 429) {
