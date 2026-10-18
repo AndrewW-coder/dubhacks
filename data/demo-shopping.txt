@@ -1,0 +1,43 @@
+# The shopping story for the demo (Visa track). Owned by User 1.
+#
+#   PowerShell:  $env:SHOP_SHIP_DELAY_MS=2000; $env:SHOP_DELIVER_DELAY_MS=4000; npm run sim -- data/demo-shopping.txt
+#   Git Bash:    SHOP_SHIP_DELAY_MS=2000 SHOP_DELIVER_DELAY_MS=4000 npm run sim -- data/demo-shopping.txt
+#
+# Uses the example family (Nai Nai zh, Kevin en, Mei en + trusted for money) and the curated
+# catalog. IDs like #b10 assume no AI key (placeholder translations, instant). With a real key,
+# Nai Nai's cards arrive a few seconds later and the IDs shift.
+#
+# Story: need → 3 options as cards in everyone's language → the family talks it over (threaded
+# on the cards) → votes by tapback and letter → checkout (buyer's ❤️ on the card is her yes) →
+# confirmation, shipped, delivered → "send a photo of the manual".
+
+# ── 1. Discovery + personalization ──────────────────────────────────────
+# Nai Nai: "My blood pressure monitor broke, I want a new one with big numbers."
+# Relayed as chat; Bridge sends everyone a heading + cards A/B/C (Kevin b3 b6 b9 b12,
+# Mei b4 b7 b10 b13, Nai Nai b5 b8 b11 b14).
+nainai: 我的血压计坏了，想买个新的，字要大一点
+/wait 1500
+
+# ── 2. Decision-making: the family talks it over ────────────────────────
+# A bare "ok" isn't a vote: it's relayed as chat.
+kevin: ok
+/wait 300
+# A threaded question on Mei's card B threads onto card B in Kevin's and Nai Nai's threads.
+mei: reply b10 is B too heavy for her?
+/wait 300
+kevin: reply b9 no, it's light, and the numbers are huge
+/wait 300
+
+# ── 3. Votes ────────────────────────────────────────────────────────────
+# Mei ❤️ her card B: a vote for B, and (she's the buyer) her yes to B.
+mei: tapback b10 love
+/wait 300
+# Nai Nai replies "B": two of three is a majority, so B wins. Votes are never relayed.
+nainai: B
+/wait 1500
+
+# ── 4–6. Checkout, payment, post-purchase ───────────────────────────────
+# Under Mei's limit and she ❤️ the winning card, so Bridge checks out with no second question.
+# Everyone gets "✅ … ordered … for Nai Nai, arriving …" in their language; then Mei and Nai Nai
+# get "📦 Shipped" and "🏠 Delivered / It arrived! Send me a photo of the manual…".
+/wait 5000
