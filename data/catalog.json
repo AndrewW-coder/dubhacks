@@ -6,7 +6,7 @@
    "category": "medical-device",
    "name": {
     "en": "Talking Blood Pressure Monitor, Extra-Large Display",
-    "zh": "語音血壓計（超大字幕）"
+    "zh": "语音血压计（超大字幕）"
    },
    "price": 1290,
    "currency": "TWD",
@@ -32,7 +32,7 @@
    "category": "medical-device",
    "name": {
     "en": "Big-Digit Upper Arm Blood Pressure Monitor",
-    "zh": "大字體上臂式血壓計"
+    "zh": "大字体上臂式血压计"
    },
    "price": 39.98,
    "currency": "USD",
@@ -57,7 +57,7 @@
    "category": "medical-device",
    "name": {
     "en": "Compact Wrist Blood Pressure Monitor",
-    "zh": "迷你腕式血壓計"
+    "zh": "迷你腕式血压计"
    },
    "price": 24.5,
    "currency": "USD",
@@ -80,7 +80,7 @@
    "category": "medical-device",
    "name": {
     "en": "Smart Blood Pressure Monitor Pro with App",
-    "zh": "智慧藍牙血壓計 Pro"
+    "zh": "智慧蓝牙血压计 Pro"
    },
    "price": 129,
    "currency": "USD",
@@ -101,7 +101,7 @@
    "category": "medical-device",
    "name": {
     "en": "Forehead Thermometer with Chinese Voice",
-    "zh": "額溫槍（中文語音播報）"
+    "zh": "额温枪（中文语音播报）"
    },
    "price": 18.8,
    "currency": "USD",
@@ -126,7 +126,7 @@
    "category": "medical-device",
    "name": {
     "en": "Digital Oral Thermometer",
-    "zh": "電子體溫計"
+    "zh": "电子体温计"
    },
    "price": 8.99,
    "currency": "USD",
@@ -148,7 +148,7 @@
    "category": "medical-device",
    "name": {
     "en": "Weekly Pill Organizer, Large Labeled Compartments",
-    "zh": "一週大格藥盒（中英標示）"
+    "zh": "一周大格药盒（中英标示）"
    },
    "price": 12.8,
    "currency": "USD",
@@ -174,7 +174,7 @@
    "category": "medical-device",
    "name": {
     "en": "Pill Box with Reminder Alarm",
-    "zh": "定時提醒藥盒"
+    "zh": "定时提醒药盒"
    },
    "price": 22,
    "currency": "USD",
@@ -196,7 +196,7 @@
    "category": "kitchen",
    "name": {
     "en": "3-Cup Rice Cooker with Chinese Panel",
-    "zh": "3人份電子鍋（中文面板）"
+    "zh": "3人份电子锅（中文面板）"
    },
    "price": 68,
    "currency": "USD",
@@ -221,7 +221,7 @@
    "category": "kitchen",
    "name": {
     "en": "10-Cup Multi-Function Rice Cooker",
-    "zh": "10人份多功能電子鍋"
+    "zh": "10人份多功能电子锅"
    },
    "price": 119,
    "currency": "USD",
@@ -244,7 +244,7 @@
    "category": "kitchen",
    "name": {
     "en": "Auto Shut-Off Electric Kettle, 1.2L",
-    "zh": "自動斷電電熱水壺 1.2L"
+    "zh": "自动断电电热水壶 1.2L"
    },
    "price": 28.8,
    "currency": "USD",
@@ -270,7 +270,7 @@
    "category": "kitchen",
    "name": {
     "en": "Glass Electric Kettle with Temperature Control",
-    "zh": "溫控玻璃快煮壺"
+    "zh": "温控玻璃快煮壶"
    },
    "price": 45,
    "currency": "USD",
@@ -294,7 +294,7 @@
    "category": "phone",
    "name": {
     "en": "Senior Big-Button Mobile Phone (Chinese)",
-    "zh": "老人大按鍵手機（中文介面）"
+    "zh": "老人大按键手机（中文介面）"
    },
    "price": 58,
    "currency": "USD",
@@ -321,7 +321,7 @@
    "category": "phone",
    "name": {
     "en": "Easy Flip Phone with Large Keys",
-    "zh": "大按鍵摺疊手機"
+    "zh": "大按键折叠手机"
    },
    "price": 49.99,
    "currency": "USD",
@@ -344,7 +344,7 @@
    "category": "phone",
    "name": {
     "en": "Simple Tablet for Seniors, 10-inch",
-    "zh": "長輩專用簡易平板 10吋"
+    "zh": "长辈专用简易平板 10吋"
    },
    "price": 168,
    "currency": "USD",
@@ -369,7 +369,7 @@
    "category": "clothing",
    "name": {
     "en": "Lightweight Down Jacket for Women",
-    "zh": "女款輕量羽絨外套"
+    "zh": "女款轻量羽绒外套"
    },
    "price": 88,
    "currency": "USD",
@@ -394,7 +394,7 @@
    "category": "clothing",
    "name": {
     "en": "Wool Button Cardigan",
-    "zh": "羊毛開襟毛衣"
+    "zh": "羊毛开襟毛衣"
    },
    "price": 56,
    "currency": "USD",
@@ -419,7 +419,7 @@
    "category": "clothing",
    "name": {
     "en": "Red Cashmere-Blend Scarf",
-    "zh": "紅色羊絨圍巾"
+    "zh": "红色羊绒围巾"
    },
    "price": 38,
    "currency": "USD",
@@ -445,7 +445,7 @@
    "category": "groceries",
    "name": {
     "en": "Lunar New Year Snack Gift Box",
-    "zh": "新年零食禮盒"
+    "zh": "新年零食礼盒"
    },
    "price": 28.88,
    "currency": "USD",
@@ -469,7 +469,7 @@
    "category": "groceries",
    "name": {
     "en": "High-Mountain Oolong Tea Gift Tin",
-    "zh": "高山烏龍茶禮罐"
+    "zh": "高山乌龙茶礼罐"
    },
    "price": 36,
    "currency": "USD",
@@ -493,7 +493,7 @@
    "category": "groceries",
    "name": {
     "en": "Fragrant Asian Pear Gift Box",
-    "zh": "香梨禮盒"
+    "zh": "香梨礼盒"
    },
    "price": 32,
    "currency": "USD",
@@ -517,7 +517,7 @@
    "category": "groceries",
    "name": {
     "en": "Mandarin Orange Gift Box",
-    "zh": "橘子禮盒"
+    "zh": "橘子礼盒"
    },
    "price": 26.8,
    "currency": "USD",
@@ -542,7 +542,7 @@
    "category": "groceries",
    "name": {
     "en": "Instant Congee Variety Pack",
-    "zh": "即食粥綜合包"
+    "zh": "即食粥综合包"
    },
    "price": 15.8,
    "currency": "USD",
@@ -566,7 +566,7 @@
    "category": "gift",
    "name": {
     "en": "Lucky Red Wall Clock",
-    "zh": "招財紅色掛鐘"
+    "zh": "招财红色挂钟"
    },
    "price": 29.99,
    "currency": "USD",
@@ -592,7 +592,7 @@
    "category": "home",
    "name": {
     "en": "Talking Alarm Clock with Chinese Voice",
-    "zh": "中文語音報時鬧鐘"
+    "zh": "中文语音报时闹钟"
    },
    "price": 19.99,
    "currency": "USD",
@@ -617,7 +617,7 @@
    "category": "gift",
    "name": {
     "en": "Porcelain Tea Cups, Set of 4",
-    "zh": "青花瓷茶杯四件組"
+    "zh": "青花瓷茶杯四件组"
    },
    "price": 34,
    "currency": "USD",
@@ -643,7 +643,7 @@
    "category": "gift",
    "name": {
     "en": "Porcelain Tea Set, 6 Cups and Teapot",
-    "zh": "青花瓷茶具組（六杯一壺）"
+    "zh": "青花瓷茶具组（六杯一壶）"
    },
    "price": 58,
    "currency": "USD",
@@ -688,7 +688,7 @@
    "category": "gift",
    "name": {
     "en": "Phalaenopsis Orchid in Ceramic Pot",
-    "zh": "蝴蝶蘭盆栽"
+    "zh": "蝴蝶兰盆栽"
    },
    "price": 48,
    "currency": "USD",
@@ -711,7 +711,7 @@
    "category": "home",
    "name": {
     "en": "Lunar New Year Red Envelopes (Gold Foil)",
-    "zh": "燙金新年紅包袋"
+    "zh": "烫金新年红包袋"
    },
    "price": 8.8,
    "currency": "USD",
@@ -734,7 +734,7 @@
    "category": "gift",
    "name": {
     "en": "Heated Neck and Shoulder Massager",
-    "zh": "熱敷肩頸按摩器"
+    "zh": "热敷肩颈按摩器"
    },
    "price": 68,
    "currency": "USD",
@@ -760,7 +760,7 @@
    "category": "home",
    "name": {
     "en": "LED Reading Lamp with Big Touch Switch",
-    "zh": "大觸控開關LED閱讀燈"
+    "zh": "大触控开关LED阅读灯"
    },
    "price": 32,
    "currency": "USD",
@@ -786,7 +786,7 @@
    "category": "home",
    "name": {
     "en": "Tip-Over-Safe Ceramic Space Heater",
-    "zh": "防傾倒陶瓷電暖器"
+    "zh": "防倾倒陶瓷电暖器"
    },
    "price": 58,
    "currency": "USD",
@@ -812,7 +812,7 @@
    "category": "home",
    "name": {
     "en": "Non-Slip Warm House Slippers",
-    "zh": "防滑保暖室內拖鞋"
+    "zh": "防滑保暖室内拖鞋"
    },
    "price": 22.8,
    "currency": "USD",
@@ -837,7 +837,7 @@
    "category": "home",
    "name": {
     "en": "Motion-Sensor Night Lights, 3-Pack",
-    "zh": "感應式小夜燈（三入）"
+    "zh": "感应式小夜灯（三入）"
    },
    "price": 19.8,
    "currency": "USD",

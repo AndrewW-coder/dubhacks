@@ -15,6 +15,9 @@
 // extra call for a word-for-word translation and offers it as alternative B, so the reviewer
 // always has something to choose between. If that extra call fails, the reviewer can still
 // type a better translation. Alternatives are trimmed, deduped and capped at 3.
+//
+// translateBatch(texts, to, family) (additive, spec U2-15): many of Bridge's own lines for one
+// reader in one AI call; see the section at the end of this file.
 
 import { hasClaude, callTool } from "./claude.js";
 import { findLearnedMeaning, getGlossary } from "./glossary.js";
@@ -171,7 +174,7 @@ Translate the way a warm, bilingual relative would, not a dictionary:
 - Grandchild → grandparent: respectful and affectionate, like a loving grandchild talking to Grandma, never stiff or formal. In Chinese, 您 or a warm 你 with 奶奶/爷爷 both work; warmth matters more than formality.
 - Grandparent → grandchild: keep the doting, nagging, sometimes bossy grandparent voice in everyday words. Affectionate scolding ("你这孩子") is love, not anger, unless the context shows real anger.
 - Slang, abbreviations and internet speak from young people (ngl, lol, slap, lowkey, fr, bussin, "that's sick") become plain words with the same feeling that an elder understands: "ngl your dumplings slap" is sincere praise, not hitting. Drop "lol"/"ngl" or turn them into a friendly tone.
-- Never translate or respell names, nicknames, or anything in <keep_as_is> (e.g. "Nai Nai" stays "Nai Nai" in English; 奶奶 is how Nai Nai is written in Chinese). Reuse <confirmed_meanings> exactly when the same phrase appears.
+- Never translate, transliterate or respell names, nicknames, or anything in <keep_as_is>; a Latin-script name such as "Mei" or "Kevin" stays in Latin letters inside Chinese text (e.g. "Nai Nai" stays "Nai Nai" in English; 奶奶 is how Nai Nai is written in Chinese). Reuse <confirmed_meanings> exactly when the same phrase appears.
 - Brands, stores and product names stay as they are (Costco, iPhone, Target).
 - Mixed-language messages (code-switching): translate only the parts the recipient can't read and leave the rest untouched.
 - Romanized input (pinyin without tones like "ni chi fan le ma", romaji) is the original language: read it as such and translate the meaning.
@@ -234,3 +237,104 @@ const LITERAL_TOOL = {
 function clamp(n: number): number {
   return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0.5;
 }
+
+// ── Batches of Bridge's own words (spec U2-15) ─────────────────────────────────
+//
+// translateBatch(texts, to, family) translates several of Bridge's English lines for one reader in
+// ONE AI call (shopping cards: heading + names + summaries), instead of one call per line.
+// Same order and length as `texts`. English reader → input returned, no call. Blank items, links,
+// emoji/number-only items and learned phrases never reach the model. Results share translate()'s
+// per-item cache (same key as translate(text, Bridge, to)). If the call fails or the model returns
+// the wrong number of items, the missing ones go through translate() one by one. Never throws.
+
+const BATCH_FROM: FamilyMember = { id: "bridge", name: "Bridge", handle: "", language: "en", relationship: "family assistant", isBilingualReviewer: false };
+
+export async function translateBatch(texts: string[], to: FamilyMember, family: Family): Promise<string[]> {
+  const input = Array.isArray(texts) ? texts.map((t) => (typeof t === "string" ? t : String(t ?? ""))) : [];
+  try {
+    if (!to || to.language === BATCH_FROM.language || !input.length) return input;
+    const out = input.slice();
+    const todo = new Map<string, number[]>(); // unique text → positions
+    for (let i = 0; i < input.length; i++) {
+      const t = input[i]!;
+      if (!t.trim() || NOTHING_TO_TRANSLATE.test(t.trim())) continue;
+      const learned = findLearnedMeaning(family.id, t, to.language);
+      if (learned) {
+        out[i] = learned;
+        continue;
+      }
+      const hit = hasClaude() ? cache.get(batchKey(family, to, t)) : undefined;
+      if (hit) {
+        out[i] = hit.text;
+        continue;
+      }
+      todo.set(t, [...(todo.get(t) ?? []), i]);
+    }
+    if (!todo.size) return out;
+    const unique = [...todo.keys()];
+    const fill = (t: string, value: string) => {
+      for (const i of todo.get(t) ?? []) out[i] = value;
+    };
+    // No key or the 🧪 hook: translate() does exactly what it always did (placeholders, test hook).
+    // A single line still uses the batch tool: one call, no low-confidence "literal" second call.
+    const viaTranslate = async (list: string[]) =>
+      Promise.all(list.map(async (t) => fill(t, (await translate(t, BATCH_FROM, to, family)).text)));
+    if (!hasClaude() || unique.some((t) => t.includes("🧪"))) {
+      await viaTranslate(unique);
+      return out;
+    }
+
+    let items: unknown;
+    try {
+      const r = await callTool<{ items?: unknown }>({ system: BATCH_SYSTEM_PROMPT, content: buildBatchPrompt(unique, to, family), tool: BATCH_TOOL });
+      items = r?.items;
+    } catch (err) {
+      console.error("[translate] batch call failed, translating one by one:", err instanceof Error ? err.message : err);
+    }
+    const good = Array.isArray(items) && items.length === unique.length;
+    if (!good && items !== undefined) console.warn(`[translate] batch returned ${Array.isArray(items) ? items.length : "no"} items for ${unique.length}, translating one by one`);
+    const missing: string[] = [];
+    unique.forEach((t, i) => {
+      const v = good ? String((items as unknown[])[i] ?? "").trim() : "";
+      if (!v) return void missing.push(t);
+      cache.set(batchKey(family, to, t), { text: v, confidence: 0.9 });
+      fill(t, v);
+    });
+    if (missing.length) await viaTranslate(missing);
+    return out;
+  } catch (err) {
+    console.error("[translate] batch failed, sending the English text:", err instanceof Error ? err.message : err);
+    return input;
+  }
+}
+
+const batchKey = (family: Family, to: FamilyMember, text: string) => `${family.id}|${BATCH_FROM.id}|${to.id}|${text}`;
+
+function buildBatchPrompt(texts: string[], to: FamilyMember, family: Family): string {
+  const keep = getGlossary(family.id).filter((g) => g.keepAsIs);
+  return [
+    `<recipient>${to.name}, the ${to.relationship}, who reads ${langName(to.language)}</recipient>`,
+    `<family_members>${family.members.map((m) => `${m.name} (${m.relationship})`).join(", ")}</family_members>`,
+    keep.length ? `<keep_as_is>${keep.map((g) => `${g.term} = ${g.meaning}`).join("; ")}</keep_as_is>` : "",
+    `<items>${JSON.stringify(texts)}</items>`,
+    `Translate each of the ${texts.length} items in <items> into ${langName(to.language)} for ${to.name} by calling submit_translations with exactly ${texts.length} strings, in the same order.`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+const BATCH_SYSTEM_PROMPT = `You are Bridge, a family's helpful assistant in their group chat, writing short notices to one relative in their own language (e.g. shopping options a grandparent will read on their phone).
+- Plain, warm and short: everyday words a grandparent understands, never stiff, formal or technical. In Chinese, a warm 您 is right for a grandparent.
+- Keep names, nicknames, brands, model names, numbers, prices, letters (A, B, C), URLs and emoji exactly as written. Keep <keep_as_is> terms unchanged.
+- Family members' names from <family_members> are never transliterated or respelled: "Mei" stays "Mei" and "Kevin" stays "Kevin", even inside Chinese text, so the same person always has the same name.
+- Translate each item on its own; never merge, split, skip or reorder items. Return exactly one translation per item, with no quotes, labels or explanations.`;
+
+const BATCH_TOOL = {
+  name: "submit_translations",
+  description: "Submit the translations, one per input item, in the same order.",
+  input_schema: {
+    type: "object" as const,
+    properties: { items: { type: "array", items: { type: "string" }, description: "One translation per input item, same order and count." } },
+    required: ["items"],
+  },
+};
