@@ -19,3 +19,9 @@ data/family.json
 data/glossary.json
 # Downloaded voice notes and photos
 .bridge-tmp/
+
+# Secrets: Visa sandbox certificates and keys never go in git
+secrets/
+*.pem
+*.p12
+*.key

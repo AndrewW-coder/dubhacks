@@ -194,9 +194,19 @@ const giftCard = product({ id: "gc", name: { en: "Apple gift card $25" }, price:
   check("gift card: guard silent → not bought", !r.ok && /didn't answer/.test(r.error ?? ""), JSON.stringify(r));
 }
 {
+  // Buyer priority: Mei is the only trusted member and she's the buyer (a trusted adult paying with
+  // her own card), so she decides herself, always with an explicit, warned confirmation.
+  const { r, from } = await run(mei, nainai, giftCard, [[mei, "🛒 Buy", "no"]], AGREED);
+  check("gift card, buyer is the only trusted member → buyer asked with a warning", saw(mei, "double-check", from), dump(from));
+  check("…buyer says no → not bought", !r.ok, JSON.stringify(r));
+  const { r: r2 } = await run(mei, nainai, giftCard, [[mei, "🛒 Buy", "yes"]], AGREED);
+  check("…buyer says yes → bought (a ❤️ on the card alone isn't enough)", r2.ok, JSON.stringify(r2));
+}
+{
+  // An elder buyer with nobody else to approve is still refused: that's the scam this guards against.
   const from = lines.length;
-  const r = await checkout(family, mei, nainai, giftCard); // Mei is the only trusted member, and she's the buyer
-  check("gift card, buyer is the only trusted member → refused, never self-approved", !r.ok && /trusted family member/.test(r.error ?? "") && !toWho(mei, from).length, JSON.stringify(r));
+  const r = await checkout(family, nainai, mei, giftCard);
+  check("gift card, elder buyer and no guard → refused, never self-approved", !r.ok && /trusted family member/.test(r.error ?? "") && !toWho(nainai, from).length, JSON.stringify(r));
 }
 {
   // Gift cards are scam markers even for a non-elder.
@@ -238,10 +248,11 @@ const prepaid = product({ id: "pp", name: { en: "Prepaid Visa card" }, price: 40
   ];
   for (const n of P4) check(`scam marker: ${n}`, scamSignals(n).length > 0, JSON.stringify(scamSignals(n)));
   for (const n of P4.slice(0, 12)) {
-    const from = lines.length;
-    // Mei (the only trusted member) buys for Nai Nai, asked by Nai Nai: nobody eligible to OK it.
-    const r = await checkout(family, mei, nainai, product({ id: "x", name: { en: n }, price: 40, tags: [], description: "" }), { requester: nainai, requestText: "我想买", buyerAgreed: true });
-    check(`checkout refuses "${n}" with no eligible guard`, !r.ok && /trusted family member/.test(r.error ?? "") && lines.length === from, JSON.stringify(r));
+    // Mei (the only trusted member) buys for Nai Nai, asked by Nai Nai: nobody else can OK it, so
+    // (buyer priority) Mei decides, always warned and asked explicitly even though she picked it.
+    const { r, from } = await run(mei, nainai, product({ id: "x", name: { en: n }, price: 40, tags: [], description: "" }), [[mei, "🛒 Buy", "no"]], { requester: nainai, requestText: "我想买", buyerAgreed: true });
+    check(`"${n}" with no other guard → buyer warned and asked`, saw(mei, "double-check", from), dump(from));
+    check(`"${n}": buyer says no → not bought`, !r.ok, JSON.stringify(r));
   }
   for (const n of ["steam basket", "vanilla cookies", "Apple pie tin", "Large-display blood pressure monitor", "我想买点卡片"]) check(`not a scam marker: ${n}`, scamSignals(n).length === 0, JSON.stringify(scamSignals(n)));
 }

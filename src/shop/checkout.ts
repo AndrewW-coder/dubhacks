@@ -181,21 +181,34 @@ async function run(
     const signals = [...new Set([...scamSignals(productText), ...(opts.requestText ? scamSignals(opts.requestText) : [])])];
     const elderInvolved = isElder(requester) || isElder(forMember) || isElder(buyer);
     const target = isScamTarget(product, productText);
+    let warning = ""; // set when the buyer approves a flagged purchase themselves
     if (signals.length || (elderInvolved && target)) {
       const reasons = target && !signals.length ? ["is a gift card / prepaid / crypto / money-transfer product: a common scam target"] : signals;
       const approved = await guardApproval(family, buyer, forMember, requester, details, reasons);
-      if (approved) return approved;
+      if (approved === "buyer") {
+        // Buyer priority: no third trusted member (e.g. a two-person family), and the buyer is a
+        // trusted adult paying with their own card. They decide, but always with an explicit
+        // confirmation that shows the warning signs (a ❤️ on the card alone isn't enough).
+        warning = `⚠️ Please double-check this one:
+${formatSignals(reasons)}
+`;
+        if (!releaseBuyer) {
+          releaseBuyer = claimMoneySlot(buyer);
+          if (!releaseBuyer) return fail(`${buyer.name} has another money question from me open. Answer that first, then try again. Nothing was bought.`);
+        }
+      } else if (approved) return approved;
     }
 
     // ── 3. The buyer agrees (the core rule) ────────────────────────────────
-    if (mustConfirm) {
+    if (mustConfirm || warning) {
       const answer = await ask(
         buyer.handle,
         await moneyPrompt(
           buyLine,
-          overLimit
-            ? `This is over your shopping limit. Buy it? ❤️ or "yes" to confirm, "no" to cancel.`
-            : `Should I buy it? ❤️ or "yes" to buy, "no" to cancel.`,
+          warning +
+            (overLimit
+              ? `This is over your shopping limit. Buy it? ❤️ or "yes" to confirm, "no" to cancel.`
+              : `Should I buy it? ❤️ or "yes" to buy, "no" to cancel.`),
           buyer,
           family,
         ),
@@ -213,13 +226,19 @@ async function run(
   }
 }
 
-/** Asks a trusted member to OK a risky purchase. Returns a refusal, or undefined when approved. */
+/**
+ * Asks a trusted member to OK a risky purchase. Returns a refusal, undefined when approved, or
+ * "buyer" when nobody else can approve and the buyer may decide (with a warning) themselves.
+ */
 async function guardApproval(
   family: Family, buyer: FamilyMember, forMember: FamilyMember, requester: FamilyMember, details: string, reasons: string[],
-): Promise<OrderResult | undefined> {
+): Promise<OrderResult | "buyer" | undefined> {
   // Never the buyer, the recipient or the requester (nobody approves their own purchase).
   const eligible = trustedConfirmers(family, requester, forMember).filter((m) => m.id !== buyer.id);
   if (!eligible.length) {
+    // Buyer priority: a trusted, non-elder buyer pays with their own card, so they can decide.
+    // An elder or untrusted buyer is still refused (the scam this guards against coaches elders).
+    if (buyer.isTrustedForMoney && !isElder(buyer)) return "buyer";
     return fail(`Purchases like this need a trusted family member (not the buyer or ${forMember.name}) to OK them first, and there isn't one set up. Nothing was bought.`);
   }
   let guard: FamilyMember | undefined;

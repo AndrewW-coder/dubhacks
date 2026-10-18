@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Bridge logo">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#4F46E5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App-icon tile -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- The bridge: arch, hangers, deck -->
+  <g stroke="#FFFFFF" stroke-linecap="round" fill="none">
+    <path d="M96 300 Q256 120 416 300" stroke-width="26"/>
+    <line x1="176" y1="236" x2="176" y2="300" stroke-width="12"/>
+    <line x1="256" y1="214" x2="256" y2="300" stroke-width="12"/>
+    <line x1="336" y1="236" x2="336" y2="300" stroke-width="12"/>
+    <line x1="72" y1="300" x2="440" y2="300" stroke-width="24"/>
+  </g>
+
+  <!-- Two speech bubbles, two languages, on either side -->
+  <g fill="#FFFFFF">
+    <rect x="92" y="336" width="140" height="98" rx="34"/>
+    <path d="M116 424 L100 466 L160 430 Z"/>
+    <rect x="280" y="336" width="140" height="98" rx="34"/>
+    <path d="M396 424 L412 466 L352 430 Z"/>
+  </g>
+  <g fill="#4F46E5" font-weight="700" text-anchor="middle">
+    <text x="162" y="404" font-size="60" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif">A</text>
+    <text x="350" y="404" font-size="58" font-family="'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif">中</text>
+  </g>
+</svg>

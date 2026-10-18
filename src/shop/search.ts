@@ -146,10 +146,10 @@ function numberFrom(v: unknown): number | undefined {
 
 function httpsUrl(v: unknown): string | undefined {
   if (typeof v !== "string" || !/^https?:\/\//i.test(v.trim())) return undefined;
-  // SerpApi's product_link has raw spaces in its query ("q=large display …"): encode them, so the
-  // link stays one clickable token and iMessage can preview it.
+  // SerpApi's Google Shopping links contain raw spaces ("q=blood pressure monitor") and "|".
+  // Encode them, so the link stays one clickable token and iMessage can preview it.
   try {
-    return new URL(v.trim()).href;
+    return new URL(v.trim()).href.replace(/\|/g, "%7C");
   } catch {
     return undefined;
   }
