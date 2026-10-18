@@ -22,7 +22,8 @@ console.log = (...args: unknown[]) => void lines.push(args.map(String).join(" ")
 console.warn = () => {};
 
 const { getFamilyByHandle, getAllMembers } = await import("../db/store.js");
-const { tryResolvePrompt } = await import("../relay/prompts.js");
+const promptsMod = await import("../relay/prompts.js");
+const { tryResolvePrompt } = promptsMod;
 const { tryHandlePayment, resetMoneySlotsForTests, claimMoneySlot } = await import("../payments/flow.js");
 const catalog = await import("./catalog.js");
 const { resetNeedsForTests } = await import("../payments/needs.js");
@@ -77,7 +78,16 @@ async function settle() {
   while (hasOpenDecision(family) && Date.now() < end) await sleep(20);
   await sleep(50);
 }
+/** Every voter has their last card (votes sent before a voter's own cards would be relayed as chat). */
+async function cardsOut(from: number, last = "C", ms = 3000): Promise<void> {
+  for (const m of family.members) await lineFor(m, `${last} · `, from, ms);
+}
+
 function reset() {
+  // Withdraw every question left open by earlier cases (User 1's prompts.ts has cancel()), so a
+  // stale money offer can't make a voter look busy and hold their cards back (M-2).
+  const cancel = (promptsMod as unknown as { cancel?: (id: string) => boolean }).cancel;
+  if (cancel) for (const l of lines) for (const [, id] of l.matchAll(/#(b\d+)/g)) cancel(id!);
   resetShoppingForTests();
   resetNeedsForTests();
   resetMoneySlotsForTests();
@@ -198,6 +208,7 @@ let bCardKevin = "";
   await tryHandlePayment(family, nainai, msg(nainai, "我的血压计坏了，想买个新的，字要大一点"));
   const kB = idOf(await lineFor(kevin, "B · EasyPulse Talking Monitor", from));
   await lineFor(mei, "C · CalmCuff", from);
+  await cardsOut(from);
   tryResolvePrompt(tap(kevin, kB, "love"));
   tryResolvePrompt(msg(nainai, "B"));
   const voteFrom = from;
@@ -238,6 +249,7 @@ let bCardKevin = "";
   const from = lines.length;
   await tryHandleShopping(family, kevin, msg(kevin, "find Nai Nai a blood pressure monitor"));
   await lineFor(kevin, "C · CalmCuff", from);
+  await cardsOut(from);
   check("a decision is open", hasOpenDecision(family));
   check("second explicit request while open → relayed (false)", (await tryHandleShopping(family, mei, msg(mei, "buy Nai Nai a tablet"))) === false);
   check("second request told to wait", Boolean(await lineFor(mei, "I'm still helping the family choose a blood pressure monitor for Nai Nai", from)), dump(from));
@@ -275,6 +287,7 @@ let bCardKevin = "";
   const from = lines.length;
   await tryHandlePayment(family, nainai, msg(nainai, "我的血压计坏了"));
   await lineFor(mei, "C · CalmCuff", from);
+  await cardsOut(from);
   tryResolvePrompt(msg(mei, "A"));
   check("p3: Mei's bare letter → Mei still asked to confirm", Boolean(await lineFor(mei, "🛒 Buy A · VitaCheck", from, 2000)), dump(from));
   check("p3: no confirmation → nothing bought", Boolean(await lineFor(mei, "Mei didn't answer", from, 2000)) && !lines.slice(from).some((l) => l.includes("✅")), dump(from));
@@ -289,6 +302,7 @@ let bCardKevin = "";
   await tryHandleShopping(family, kevin, msg(kevin, "find Nai Nai a blood pressure monitor"));
   const kA = idOf(await lineFor(kevin, "A · VitaCheck", from));
   await lineFor(mei, "C · CalmCuff", from);
+  await cardsOut(from);
   tryResolvePrompt(tap(kevin, kA, "love"));
   tryResolvePrompt(msg(mei, "A"));
   check("buyer ❤️ on the winning card → 'Checking out'", Boolean(await lineFor(kevin, "Checking out for Nai Nai with your card", from)), dump(from));
@@ -361,6 +375,7 @@ let bCardKevin = "";
   const from = lines.length;
   await tryHandleShopping(family, kevin, msg(kevin, "find Nai Nai a blood pressure monitor"));
   await lineFor(mei, "C · CalmCuff", from);
+  await cardsOut(from);
   tryResolvePrompt(msg(kevin, "A"));
   tryResolvePrompt(msg(mei, "A"));
   check("buyer told it failed", Boolean(await lineFor(kevin, "The card was declined, so nothing was bought.", from)), dump(from));
@@ -373,6 +388,7 @@ let bCardKevin = "";
   const f2 = lines.length;
   await tryHandleShopping(family, kevin, msg(kevin, "find Nai Nai a blood pressure monitor"));
   await lineFor(mei, "C · CalmCuff", f2);
+  await cardsOut(f2);
   tryResolvePrompt(msg(kevin, "A"));
   tryResolvePrompt(msg(mei, "A"));
   check("maybe charged → 'may have gone through'", Boolean(await lineFor(kevin, "may have gone through", f2)), dump(f2));
@@ -496,6 +512,7 @@ let bCardKevin = "";
   await tryHandlePayment(family, nainai, msg(nainai, "我想买一个血压计，字要大一点"));
   const kB = idOf(await lineFor(kevin, "B · EasyPulse Talking Monitor", from));
   await lineFor(mei, "C · CalmCuff", from);
+  await cardsOut(from);
   const zB = await lineFor(nainai, "B · EasyPulse 语音血压计", from);
   const zC = await lineFor(nainai, "C · ", from);
   const cardsCalls = translationCalls().length;

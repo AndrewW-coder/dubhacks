@@ -145,7 +145,14 @@ function numberFrom(v: unknown): number | undefined {
 }
 
 function httpsUrl(v: unknown): string | undefined {
-  return typeof v === "string" && /^https?:\/\//i.test(v) ? v : undefined;
+  if (typeof v !== "string" || !/^https?:\/\//i.test(v.trim())) return undefined;
+  // SerpApi's product_link has raw spaces in its query ("q=large display …"): encode them, so the
+  // link stays one clickable token and iMessage can preview it.
+  try {
+    return new URL(v.trim()).href;
+  } catch {
+    return undefined;
+  }
 }
 
 /** One SerpApi shopping result → Product (undefined if it has no title or price). */
