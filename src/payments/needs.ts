@@ -16,6 +16,12 @@
 //   S-7  a money request's number is read in the elder's currency (块/元 → TWD for Nai Nai) and
 //        converted to USD for the cap and the suggestion.
 //
+// Shopping (spec U2-10c): a need for a THING ("the heater broke") goes to the shopping flow
+// first (shop/shopFlow.ts shopForNeed): if a decision starts, the family gets option cards
+// instead of the money offer; if nothing fits (or the family is already deciding), the money
+// offer below runs as before. Rent, bills, medicine, a doctor's visit and money requests always
+// get the money offer (isMoneyOnlyNeed): prescriptions and visits aren't bought from a catalog.
+//
 // maybeOfferHelp(family, sender, text) is fire-and-forget: it never throws and never
 // delays the relay. Called by tryHandlePayment (flow.ts) for every non-gift message.
 //
@@ -29,6 +35,7 @@ import { translate } from "../translate/translator.js";
 import { claimMoneySlot, isYes, MAX_GIFT_USD, moneyPrompt, parseAmount, paymentFailedText, say } from "./flow.js";
 import { formatSignals, isElder, scamSignals, trustedConfirmer } from "./scamCheck.js";
 import { formatMoney, isSupportedCurrency, quote, sendGift } from "./visa.js";
+import { shopForNeed } from "../shop/shopFlow.js";
 import type { Family, FamilyMember } from "../types.js";
 
 /** Don't offer twice for the same elder + need within this window; offers also expire after it. */
@@ -87,6 +94,16 @@ export function maybeOfferHelp(family: Family, sender: FamilyMember, text: strin
   }
 }
 
+/** Needs that always get the money offer, never the shopping flow. */
+const MONEY_ONLY: Category[] = ["money", "rent", "bills", "medicine", "doctor"];
+
+/** True when this elder's message is a need that money (not shopping) answers. Used by shopFlow.ts. */
+export function isMoneyOnlyNeed(sender: FamilyMember, text: string): boolean {
+  if (!isElder(sender)) return false;
+  const d = detect(text, sender);
+  return Boolean(d && MONEY_ONLY.includes(d.category));
+}
+
 /** Test helper: forget previous offers (the 10-minute duplicate guard). */
 export function resetNeedsForTests(): void {
   recentOffers.clear();
@@ -118,6 +135,9 @@ async function run(family: Family, elder: FamilyMember, text: string, pre: Detec
   const last = recentOffers.get(key);
   if (last !== undefined && Date.now() - last < DEDUPE_MS) return;
   recentOffers.set(key, Date.now());
+
+  // A buyable need → option cards instead of money (falls through when nothing fits).
+  if (!MONEY_ONLY.includes(pre.category) && (await shopForNeed(family, elder, text))) return;
 
   const found = pre.category === "money" ? pre : await refine(text, elder, pre);
   if (!found) {

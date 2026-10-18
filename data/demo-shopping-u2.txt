@@ -1,0 +1,61 @@
+# User 2's shopping story: npm run sim -- data/demo-shopping-u2.txt  (no keys needed)
+# Owned by User 2 (spec U2-10c, safety rules U2-13). Bridge shops for the people you love:
+# need → 3 options as cards in everyone's language → the family talks and votes → the buyer says
+# yes → checkout → confirmation.
+# Runs against the real curated catalog (data/catalog.json, no keys). IDs like #b9 assume its 3
+# blood pressure options and the 3-member example family (data/family.example.json).
+#
+# The core rule: Bridge never buys until the BUYER has clearly said yes to that product: a ❤️ on
+# the winning option's own card, or ❤️ / "yes" to "🛒 Buy B · … · $39.98 for Nai Nai?". A bare
+# letter, a 👍 or a timeout winner is a vote, never a purchase. Over the limit, always asked.
+
+# ── 1. Discovery: Nai Nai's blood pressure monitor broke ─────────────────
+# Relayed as normal chat. In the background Bridge recognizes a shopping need, finds 3 options
+# and sends a heading + one card per option to everyone, in their own language and currency.
+# Each card ends with the product link alone on a line (never translated, so iMessage previews
+# it), or "(demo product)" for a fictional catalog item.
+nainai: 我的血压计坏了，想买个新的，字要大一点
+/wait 800
+
+# ── 2. Decision-making: the family talks it over (normal chat, not a vote) ──
+kevin: B looks good, big screen
+/wait 200
+
+# ── 3. Votes: Kevin ❤️ the B card (#b9 is Kevin's card B), Nai Nai replies "B" ──
+# Two of three is a majority, so B wins. Votes are never relayed as chat.
+kevin: tapback b9 love
+/wait 200
+nainai: B
+/wait 800
+
+# ── 4. The buyer says yes ───────────────────────────────────────────────
+# Nai Nai is an elder, so Mei (trusted for money) is the buyer. Mei didn't pick B herself, so
+# everyone hears "Waiting for Mei to confirm", and Mei gets the untranslated line
+# "🛒 Buy B · Big-Digit Upper Arm Blood Pressure Monitor · $39.98 for Nai Nai?" (❤️ or yes).
+mei: yes
+/wait 800
+
+# ── 5–6. Checkout + confirmation ────────────────────────────────────────
+# Everyone gets "✅ Mei ordered a new blood pressure monitor for Nai Nai, arriving …" in their
+# own language (the 🎁 "bought you a gift" wording is kept for gift occasions).
+/wait 400
+
+# ── Second run: the buyer ❤️ the card, but it's over the limit, so they still confirm ──
+# An explicit command to Bridge isn't relayed. Kevin asked, so Kevin is the buyer. The catalog has
+# one fitting tablet ($168, over Kevin's $50 default limit), so there's a single card A
+# (#b27 is Kevin's card A). Kevin ❤️ it and Mei replies "A" (a majority); over the limit, Kevin
+# still gets "🛒 Buy A · … · $168 for Nai Nai? (… · limit $50)" and answers yes.
+kevin: find Nai Nai a tablet with big buttons
+/wait 800
+kevin: tapback b27 love
+/wait 100
+mei: A
+/wait 600
+kevin: yes
+/wait 800
+
+# ── No options: relayed as chat, and Bridge tells Kevin privately ────────
+# No money suggestion from the shopping flow: a real need from Nai Nai gets the money offer
+# from the needs flow instead.
+kevin: find Nai Nai a fridge
+/wait 600

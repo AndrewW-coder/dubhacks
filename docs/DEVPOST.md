@@ -1,57 +1,60 @@
-# Bridge: a family group chat where everyone speaks their own language
+# Bridge: shops for the people you love
 
 > Devpost draft. `[TODO: …]` marks facts only the team can fill in.
 
 ## Inspiration
 
-[TODO: the real family story — whose grandparents, which languages, what got lost between them.]
+[TODO: the real family story — whose grandparent, which languages, what was hard about buying for them.]
 
-Translation apps lose tone, don't know family nicknames, and guess at the emotional messages that matter most. And grandparents won't install a new app, but they already text.
+Buying for a grandparent abroad is hard from both sides: she can't use English-language stores, and the grandkids can't read her language or tell what she needs. She won't install a new app, but she already texts.
 
 ## What it does
 
-Bridge is an iMessage agent. Each family member has a 1:1 thread with Bridge. When someone writes, Bridge translates the message for each other member, using their relationship (respectful forms for elders, casual between cousins) and a family glossary, and relays it into their thread. To each person it looks like one family group chat in their own language.
+Bridge is an iMessage agent. Each family member has a 1:1 thread with Bridge, which relays every message to everyone else in their own language, so it feels like one family group chat. On top of that, it helps the family **shop for the people they love**:
 
-- **Full iMessage, not just text.** Threaded replies, tapbacks, edits and unsends are relayed to the matching copy in every thread. Photos of letters or prescription labels get a short explanation in each reader's language. Voice notes are transcribed, translated and relayed.
-- **Humans check the hard ones.** Every translation has a confidence score. Low-confidence ones (idioms, sarcasm, dialect) are sent privately to the family's bilingual member as "A or B?". The message only sends after they answer, and Bridge saves the answer so it never asks about that phrase again.
-- **Emergencies skip the line.** "救命，我摔倒了" is flagged 🚨, skips review, and jumps ahead of any waiting message.
-- **Money across the gap (Visa).** "send Nai Nai $50 for New Year" shows the amount in her currency, asks you to confirm with ❤️ or "yes", sends it through Visa Direct, and she gets a 🧧 with the note in Chinese. When a grandparent mentions running out of medicine, the family is offered a small gift. Money requests from a grandparent, or with scam markers (gift cards, wire, crypto, secrecy, urgency), are first approved by a trusted family member.
+- **Discovery.** Nai Nai writes "我的血压计坏了，想买个新的，字要大一点" ("my blood pressure monitor broke, I want a new one with bigger numbers"). It's relayed as chat, and Bridge recognizes a buyable need. Anyone can also ask: "find Nai Nai a tablet with big buttons".
+- **Personalization.** Bridge searches Google Shopping through SerpApi (real links), or an offline catalog without a key, and picks **3 options that fit her**: in budget, ships to her country, elder-friendly features (large display, simple buttons, Chinese voice) ranked higher, each with a "why this one". Cultural rules are enforced in code: no clocks as gifts (送钟 sounds like attending a funeral), no sets of four (四 sounds like 死), no pears (分梨, separation), no white or black flowers.
+- **Decision-making.** Every member gets the same 3 options as cards A/B/C **in their own language and currency** (Nai Nai sees NT$, Kevin sees $), with the link on its own line for an iMessage preview. The family talks it over, then votes with a tapback or a letter. Votes are never relayed.
+- **Checkout.** The buyer is whoever asked, or the member trusted with money. Under their limit, the vote is the approval; over it, they must answer ❤️ or "yes". Scam-target purchases involving a grandparent (gift cards, crypto, wire transfers) need a trusted member's approval first.
+- **Payments.** Checkout is mock for the demo; a sandbox mode is wired to Visa Direct until we have the Visa booth's card API. [TODO: what we used from the Visa booth.]
+- **Post-purchase.** Everyone gets "✅ Mei bought Nai Nai a gift 🎁, arriving Wednesday" in their own language. A photo of the manual gets explained in Chinese. If nothing fits, Bridge suggests sending money instead.
+
+Supporting features: tone-aware translation with a family glossary, a bilingual member who settles low-confidence translations (Bridge learns from each answer), 🚨 emergency detection, photo and voice-note relay, and Visa Direct money gifts with scam checks.
 
 ## How we built it
 
-- **Photon track: Spectrum SDK** (`spectrum-ts`), plus the raw Advanced iMessage event stream for edits, unsends and tapback removals. Together they cover tapbacks, threaded replies, edits and unsends, with no Mac and no public webhook. The hub-and-spoke relay keeps a map from each original message to its copy in every thread, so a tapback, reply, edit or unsend on one copy is applied to all the others.
-- **Gemini** (by default; Claude or any OpenAI-compatible model can be swapped in with one setting) for translation (function calls returning text, confidence, alternatives and a cultural note), payment intent parsing, and reading photos.
-- **OpenAI speech-to-text** for voice notes, with ffmpeg converting iPhone `.caf` audio.
-- **Visa track: Visa Direct** push funds (OCT) and the Foreign Exchange Rates API, over two-way TLS, sandbox test cards only, with a mock mode for the demo.
-- A **terminal simulator** runs the same app with every member typed from one keyboard, plus scripted runs (`npm run sim:demo`, `npm run sim:u2`).
+- **Photon track: Spectrum SDK** (`spectrum-ts`) plus the raw Advanced iMessage stream for edits and unsends. The relay maps each message to its copy in every thread, so a tapback on Kevin's card B counts as a vote for B. A family and an AI deciding a purchase together is the track's hybrid intelligence.
+- **Product search: SerpApi Google Shopping**, with `data/catalog.json` (fictional products) as the offline fallback.
+- **Gemini** by default (or Claude / any OpenAI-compatible model) for translation, need extraction and ranking; regex and tag scoring without a key.
+- **Visa track:** Visa Direct and Foreign Exchange Rates over two-way TLS (sandbox test cards only), plus mock mode.
+- A **terminal simulator**: `npm run sim -- data/demo-shopping-u2.txt` plays the shopping story with no keys.
 
 ## Challenges we ran into
 
-- **A group chat can't show each person a different language**, so we built the hub-and-spoke relay and had to keep replies, tapbacks, edits and unsends in sync across copies.
-- **Asking and waiting inside a chat.** Answers to review and payment questions must never be relayed to the family, and emergencies must not wait behind a message stuck on a reviewer.
-- **False alarms.** "救命这个好好笑" is internet slang for "this is hilarious", not an emergency, and "I spent $20 on groceries" is chat, not a payment.
-- **Working without keys.** We had no API keys for most of the build, so every integration has a no-key fallback and was tested against local fake servers.
-- [TODO: anything that went wrong with Photon or Visa sandbox setup on the day.]
+- **Voting inside a chat.** Votes and confirmations must never be relayed, while people chat freely during the vote; a bare "ok" must not count.
+- **Cultural rules without false alarms.** The "clock" rule must not block a monitor with a clock display.
+- **Working without keys.** Every integration has a no-key fallback and was tested against fake servers; SerpApi and the Visa sandbox still need real credentials.
+- [TODO: anything that went wrong with Photon or Visa setup on the day.]
 
 ## Accomplishments that we're proud of
 
-- The hybrid loop: AI translates, a family member settles the hard cases, and Bridge learns from each answer.
-- Scam protection designed around how grandparents actually get targeted.
+- The full loop, need → options in every language → tapback vote → checkout → confirmation, in plain iMessage.
+- Nothing is bought without a person: the vote is the approval, and over the limit the buyer confirms.
 - [TODO: what worked live on real phones in the demo.]
 
 ## What we learned
 
-- Tone and family context matter more than word accuracy.
-- [TODO: what the team learned about Photon, Visa Direct and working in parallel.]
+- Personalizing for an elder is about who she is (language, eyesight, customs), not purchase history.
+- [TODO: what the team learned about Photon, Visa and working in parallel.]
 
 ## What's next
 
-- Sending a voice reply back in each person's language (text-to-speech is written; the relay doesn't send it yet).
-- Answering a review question with a tapback, and writing the `?` explanation in the asker's language.
-- Persistent storage, onboarding new members, and real card linking instead of sandbox test cards.
+- Shipped/delivered updates and a fuller family vote (`familyVote` / `trackOrder`, in progress).
+- Paying through the Visa booth's card API instead of mock checkout.
+- A family wallet that earns points toward the next gift.
 
 ## Built with
 
-TypeScript · Node.js · Photon Spectrum SDK · Google Gemini API · OpenAI speech-to-text · ffmpeg · heic-convert · Visa Direct · Visa Foreign Exchange Rates API
+TypeScript · Node.js · Photon Spectrum SDK · SerpApi Google Shopping · Google Gemini API · OpenAI speech-to-text · ffmpeg · heic-convert · Visa Direct · Visa Foreign Exchange Rates API
 
-[TODO: screenshots of a relayed conversation, a review question, and a 🧧 gift. Demo languages: [TODO]. Demo video link: [TODO].]
+[TODO: screenshots of the option cards in Chinese and English, a tapback vote, and the confirmation. Demo video link: [TODO].]

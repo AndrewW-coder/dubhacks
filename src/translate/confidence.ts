@@ -18,6 +18,9 @@ const EMERGENCY_PATTERNS: RegExp[] = [
   /\bhelp\b.{0,30}\b(fell|fallen|hurt|bleeding|pain|hospital|ambulance|can't breathe)\b/iu,
   /\b(i fell|i've fallen|i have fallen|fell down)\b(?!\s+(asleep|for|in love|behind|off|out of))/iu,
   /\b(can'?t breathe|cannot breathe|chest pain|(having|had) a (heart attack|stroke)|i'?m bleeding)\b/iu,
+  // Someone else fell or collapsed, or an ambulance is mentioned ("order an ambulance for grandma, she fell")
+  /\b(she|he|grandma|grandpa|nai nai|ye ye|mom|dad|someone)\s+(just\s+)?(fell|has fallen|collapsed|passed out|fainted)\b(?!\s+(asleep|for|in love|behind|off|out of))/iu,
+  /\b(an?\s+)?ambulance\b/iu,
   // Chinese (Simplified + Traditional)
   /救命|快来人|快來人|摔倒了|跌倒了|我摔倒|我跌倒|救护车|救護車|急救|心脏病|心臟病|心脏不舒服|心臟不舒服|喘不过气|喘不過氣|胸口痛|胸口疼/u,
   // Spanish

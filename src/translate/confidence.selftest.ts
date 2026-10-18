@@ -18,6 +18,9 @@ const cases: [string, boolean][] = [
   ["cứu tôi", true],
   ["HELP!!", true],
   ["I can't breathe", true],
+  ["order an ambulance for grandma now, she fell", true],
+  ["grandma fell in the kitchen", true],
+  ["Nai Nai collapsed", true],
 
   ["can you help me with the recipe?", false],
   ["help me pick a gift", false],
@@ -29,6 +32,8 @@ const cases: [string, boolean][] = [
   ["救命这个好好笑", false],
   ["救命哈哈哈", false],
   ["the macaíba fruit", false],
+  ["she fell asleep watching TV", false],
+  ["he fell in love with the dumplings lol", false],
 ];
 
 let failed = 0;

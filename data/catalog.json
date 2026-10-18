@@ -1,0 +1,861 @@
+{
+ "_note": "Fictional demo products and merchants for Bridge's offline shopping demo. Not real listings; no links.",
+ "products": [
+  {
+   "id": "bp-talking-xl",
+   "category": "medical-device",
+   "name": {
+    "en": "Talking Blood Pressure Monitor, Extra-Large Display",
+    "zh": "語音血壓計（超大字幕）"
+   },
+   "price": 1290,
+   "currency": "TWD",
+   "merchant": "Evergreen Elder Tech",
+   "shipsTo": [
+    "TW",
+    "HK",
+    "CN",
+    "US"
+   ],
+   "tags": [
+    "blood-pressure",
+    "large-display",
+    "chinese-voice",
+    "simple-buttons",
+    "elder-friendly",
+    "one-touch"
+   ],
+   "description": "Upper-arm cuff monitor with a 4.5-inch backlit screen and Mandarin voice readout of every result. One big start button; stores 2 users x 90 readings."
+  },
+  {
+   "id": "bp-bigdigit",
+   "category": "medical-device",
+   "name": {
+    "en": "Big-Digit Upper Arm Blood Pressure Monitor",
+    "zh": "大字體上臂式血壓計"
+   },
+   "price": 39.98,
+   "currency": "USD",
+   "merchant": "Golden Years Health Co.",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "blood-pressure",
+    "large-display",
+    "simple-buttons",
+    "elder-friendly"
+   ],
+   "description": "Extra-large digits and a two-button design. Irregular heartbeat indicator, wide-range cuff. English screen only."
+  },
+  {
+   "id": "bp-wrist-mini",
+   "category": "medical-device",
+   "name": {
+    "en": "Compact Wrist Blood Pressure Monitor",
+    "zh": "迷你腕式血壓計"
+   },
+   "price": 24.5,
+   "currency": "USD",
+   "merchant": "Golden Years Health Co.",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "blood-pressure",
+    "portable"
+   ],
+   "description": "Small wrist monitor for travel. Small screen with tiny buttons; English menus."
+  },
+  {
+   "id": "bp-smart-pro",
+   "category": "medical-device",
+   "name": {
+    "en": "Smart Blood Pressure Monitor Pro with App",
+    "zh": "智慧藍牙血壓計 Pro"
+   },
+   "price": 129,
+   "currency": "USD",
+   "merchant": "Northwind Medical Supply",
+   "shipsTo": [
+    "US",
+    "CA"
+   ],
+   "tags": [
+    "blood-pressure",
+    "app",
+    "bluetooth"
+   ],
+   "description": "Bluetooth monitor that syncs to a phone app, multi-user profiles, ECG-style trend charts. Requires a smartphone to set up."
+  },
+  {
+   "id": "thermo-forehead-voice",
+   "category": "medical-device",
+   "name": {
+    "en": "Forehead Thermometer with Chinese Voice",
+    "zh": "額溫槍（中文語音播報）"
+   },
+   "price": 18.8,
+   "currency": "USD",
+   "merchant": "Evergreen Elder Tech",
+   "shipsTo": [
+    "TW",
+    "HK",
+    "CN",
+    "US"
+   ],
+   "tags": [
+    "thermometer",
+    "chinese-voice",
+    "large-display",
+    "elder-friendly",
+    "no-contact"
+   ],
+   "description": "One-second no-contact reading spoken aloud in Mandarin; color-coded large screen turns red for a fever."
+  },
+  {
+   "id": "thermo-digital",
+   "category": "medical-device",
+   "name": {
+    "en": "Digital Oral Thermometer",
+    "zh": "電子體溫計"
+   },
+   "price": 8.99,
+   "currency": "USD",
+   "merchant": "Golden Years Health Co.",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "thermometer"
+   ],
+   "description": "Basic oral thermometer with a small display and beep."
+  },
+  {
+   "id": "pill-weekly-big",
+   "category": "medical-device",
+   "name": {
+    "en": "Weekly Pill Organizer, Large Labeled Compartments",
+    "zh": "一週大格藥盒（中英標示）"
+   },
+   "price": 12.8,
+   "currency": "USD",
+   "merchant": "Lotus Home Goods",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "pill-organizer",
+    "large-print",
+    "chinese-labels",
+    "elder-friendly",
+    "easy-open"
+   ],
+   "description": "7-day, AM/PM organizer with big easy-open lids and bilingual Chinese/English day labels."
+  },
+  {
+   "id": "pill-alarm",
+   "category": "medical-device",
+   "name": {
+    "en": "Pill Box with Reminder Alarm",
+    "zh": "定時提醒藥盒"
+   },
+   "price": 22,
+   "currency": "USD",
+   "merchant": "Northwind Medical Supply",
+   "shipsTo": [
+    "US",
+    "CA",
+    "TW"
+   ],
+   "tags": [
+    "pill-organizer",
+    "reminder",
+    "simple-buttons"
+   ],
+   "description": "4-compartment daily pill box with a beeping reminder for each dose. Set-up needs small buttons."
+  },
+  {
+   "id": "rice-cooker-zh",
+   "category": "kitchen",
+   "name": {
+    "en": "3-Cup Rice Cooker with Chinese Panel",
+    "zh": "3人份電子鍋（中文面板）"
+   },
+   "price": 68,
+   "currency": "USD",
+   "merchant": "Jade Kitchen Supply",
+   "shipsTo": [
+    "TW",
+    "HK",
+    "CN",
+    "US"
+   ],
+   "tags": [
+    "rice-cooker",
+    "chinese-labels",
+    "simple-buttons",
+    "elder-friendly",
+    "large-display"
+   ],
+   "description": "Small rice cooker with a Chinese-language control panel, big one-touch cook button and keep-warm. Non-stick pot."
+  },
+  {
+   "id": "rice-cooker-multi",
+   "category": "kitchen",
+   "name": {
+    "en": "10-Cup Multi-Function Rice Cooker",
+    "zh": "10人份多功能電子鍋"
+   },
+   "price": 119,
+   "currency": "USD",
+   "merchant": "Jade Kitchen Supply",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "rice-cooker",
+    "multi-function"
+   ],
+   "description": "Large family cooker with 12 programs, timer and steam basket. English menu with many buttons."
+  },
+  {
+   "id": "kettle-auto",
+   "category": "kitchen",
+   "name": {
+    "en": "Auto Shut-Off Electric Kettle, 1.2L",
+    "zh": "自動斷電電熱水壺 1.2L"
+   },
+   "price": 28.8,
+   "currency": "USD",
+   "merchant": "Jade Kitchen Supply",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "kettle",
+    "auto-shutoff",
+    "elder-friendly",
+    "simple-buttons",
+    "lightweight"
+   ],
+   "description": "Light 1.2-liter kettle with auto shut-off and boil-dry protection; one switch, cool-touch handle."
+  },
+  {
+   "id": "kettle-glass",
+   "category": "kitchen",
+   "name": {
+    "en": "Glass Electric Kettle with Temperature Control",
+    "zh": "溫控玻璃快煮壺"
+   },
+   "price": 45,
+   "currency": "USD",
+   "merchant": "Lotus Home Goods",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "kettle",
+    "temperature-control",
+    "tea"
+   ],
+   "description": "Glass kettle with 6 temperature presets for different teas and a keep-warm mode."
+  },
+  {
+   "id": "phone-senior-zh",
+   "category": "phone",
+   "name": {
+    "en": "Senior Big-Button Mobile Phone (Chinese)",
+    "zh": "老人大按鍵手機（中文介面）"
+   },
+   "price": 58,
+   "currency": "USD",
+   "merchant": "Evergreen Elder Tech",
+   "shipsTo": [
+    "TW",
+    "HK",
+    "CN",
+    "US"
+   ],
+   "tags": [
+    "phone",
+    "simple-buttons",
+    "large-display",
+    "chinese-voice",
+    "elder-friendly",
+    "sos-button",
+    "loud-speaker"
+   ],
+   "description": "Big-button phone with a Chinese menu, spoken key presses, loud speaker, and an SOS button that calls family."
+  },
+  {
+   "id": "phone-flip-big",
+   "category": "phone",
+   "name": {
+    "en": "Easy Flip Phone with Large Keys",
+    "zh": "大按鍵摺疊手機"
+   },
+   "price": 49.99,
+   "currency": "USD",
+   "merchant": "Northwind Mobile",
+   "shipsTo": [
+    "US",
+    "CA"
+   ],
+   "tags": [
+    "phone",
+    "simple-buttons",
+    "large-display",
+    "elder-friendly",
+    "hearing-aid-compatible"
+   ],
+   "description": "Flip phone with large keys, hearing-aid compatible, English menus."
+  },
+  {
+   "id": "tablet-elder",
+   "category": "phone",
+   "name": {
+    "en": "Simple Tablet for Seniors, 10-inch",
+    "zh": "長輩專用簡易平板 10吋"
+   },
+   "price": 168,
+   "currency": "USD",
+   "merchant": "Evergreen Elder Tech",
+   "shipsTo": [
+    "TW",
+    "HK",
+    "CN",
+    "US"
+   ],
+   "tags": [
+    "tablet",
+    "large-display",
+    "chinese-voice",
+    "elder-friendly",
+    "video-call"
+   ],
+   "description": "10-inch tablet with a simplified home screen in Chinese, one-tap family video calls and voice assistant."
+  },
+  {
+   "id": "jacket-down",
+   "category": "clothing",
+   "name": {
+    "en": "Lightweight Down Jacket for Women",
+    "zh": "女款輕量羽絨外套"
+   },
+   "price": 88,
+   "currency": "USD",
+   "merchant": "Harbor Warm Wear",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "jacket",
+    "warm",
+    "lightweight",
+    "winter"
+   ],
+   "description": "Packable down jacket, very warm but light; easy front zipper and deep pockets."
+  },
+  {
+   "id": "cardigan-wool",
+   "category": "clothing",
+   "name": {
+    "en": "Wool Button Cardigan",
+    "zh": "羊毛開襟毛衣"
+   },
+   "price": 56,
+   "currency": "USD",
+   "merchant": "Harbor Warm Wear",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "sweater",
+    "warm",
+    "easy-dress",
+    "winter"
+   ],
+   "description": "Soft wool cardigan with large buttons, easy to put on over other layers."
+  },
+  {
+   "id": "scarf-red",
+   "category": "clothing",
+   "name": {
+    "en": "Red Cashmere-Blend Scarf",
+    "zh": "紅色羊絨圍巾"
+   },
+   "price": 38,
+   "currency": "USD",
+   "merchant": "Red Lantern Gifts",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "scarf",
+    "warm",
+    "red",
+    "lunar-new-year",
+    "gift"
+   ],
+   "description": "Warm scarf in lucky red, gift boxed; a popular New Year present."
+  },
+  {
+   "id": "snack-ny-box",
+   "category": "groceries",
+   "name": {
+    "en": "Lunar New Year Snack Gift Box",
+    "zh": "新年零食禮盒"
+   },
+   "price": 28.88,
+   "currency": "USD",
+   "merchant": "Peach Blossom Pantry",
+   "shipsTo": [
+    "TW",
+    "HK",
+    "CN",
+    "US"
+   ],
+   "tags": [
+    "snacks",
+    "lunar-new-year",
+    "gift",
+    "soft-food"
+   ],
+   "description": "Assorted soft nut cakes, pineapple cakes and candied fruit in a red gift tin."
+  },
+  {
+   "id": "tea-oolong",
+   "category": "groceries",
+   "name": {
+    "en": "High-Mountain Oolong Tea Gift Tin",
+    "zh": "高山烏龍茶禮罐"
+   },
+   "price": 36,
+   "currency": "USD",
+   "merchant": "Peach Blossom Pantry",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "tea",
+    "gift",
+    "lunar-new-year"
+   ],
+   "description": "Premium oolong in a gold-and-red gift tin, 150 g."
+  },
+  {
+   "id": "pears-gift",
+   "category": "groceries",
+   "name": {
+    "en": "Fragrant Asian Pear Gift Box",
+    "zh": "香梨禮盒"
+   },
+   "price": 32,
+   "currency": "USD",
+   "merchant": "Peach Blossom Pantry",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "fruit",
+    "pear",
+    "gift"
+   ],
+   "description": "Six large crisp Asian pears in a gift box."
+  },
+  {
+   "id": "oranges-gift",
+   "category": "groceries",
+   "name": {
+    "en": "Mandarin Orange Gift Box",
+    "zh": "橘子禮盒"
+   },
+   "price": 26.8,
+   "currency": "USD",
+   "merchant": "Peach Blossom Pantry",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "fruit",
+    "lunar-new-year",
+    "gift",
+    "lucky"
+   ],
+   "description": "Fresh mandarin oranges, a symbol of good luck for the New Year."
+  },
+  {
+   "id": "congee-pack",
+   "category": "groceries",
+   "name": {
+    "en": "Instant Congee Variety Pack",
+    "zh": "即食粥綜合包"
+   },
+   "price": 15.8,
+   "currency": "USD",
+   "merchant": "Peach Blossom Pantry",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "food",
+    "soft-food",
+    "easy-prep"
+   ],
+   "description": "Twelve cups of instant congee: just add hot water."
+  },
+  {
+   "id": "clock-red",
+   "category": "gift",
+   "name": {
+    "en": "Lucky Red Wall Clock",
+    "zh": "招財紅色掛鐘"
+   },
+   "price": 29.99,
+   "currency": "USD",
+   "merchant": "Red Lantern Gifts",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "clock",
+    "red",
+    "lunar-new-year",
+    "gift",
+    "large-display"
+   ],
+   "description": "Decorative red wall clock with big numbers and gold fu characters."
+  },
+  {
+   "id": "clock-talking",
+   "category": "home",
+   "name": {
+    "en": "Talking Alarm Clock with Chinese Voice",
+    "zh": "中文語音報時鬧鐘"
+   },
+   "price": 19.99,
+   "currency": "USD",
+   "merchant": "Evergreen Elder Tech",
+   "shipsTo": [
+    "TW",
+    "HK",
+    "CN",
+    "US"
+   ],
+   "tags": [
+    "clock",
+    "chinese-voice",
+    "large-display",
+    "elder-friendly",
+    "simple-buttons"
+   ],
+   "description": "Speaks the time in Mandarin at the press of a big button; large display."
+  },
+  {
+   "id": "cups-set4",
+   "category": "gift",
+   "name": {
+    "en": "Porcelain Tea Cups, Set of 4",
+    "zh": "青花瓷茶杯四件組"
+   },
+   "price": 34,
+   "currency": "USD",
+   "merchant": "Red Lantern Gifts",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "cups",
+    "tea",
+    "gift",
+    "set-of-4",
+    "lunar-new-year"
+   ],
+   "description": "Blue-and-white porcelain tea cups, four pieces in a gift box."
+  },
+  {
+   "id": "cups-set6",
+   "category": "gift",
+   "name": {
+    "en": "Porcelain Tea Set, 6 Cups and Teapot",
+    "zh": "青花瓷茶具組（六杯一壺）"
+   },
+   "price": 58,
+   "currency": "USD",
+   "merchant": "Red Lantern Gifts",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "cups",
+    "tea",
+    "gift",
+    "lunar-new-year"
+   ],
+   "description": "Teapot with six cups in a red gift box."
+  },
+  {
+   "id": "flowers-white",
+   "category": "gift",
+   "name": {
+    "en": "White Chrysanthemum Bouquet",
+    "zh": "白菊花束"
+   },
+   "price": 25,
+   "currency": "USD",
+   "merchant": "Red Lantern Gifts",
+   "shipsTo": [
+    "US"
+   ],
+   "tags": [
+    "flowers",
+    "white-flowers",
+    "gift"
+   ],
+   "description": "A dozen white chrysanthemums."
+  },
+  {
+   "id": "orchid-pot",
+   "category": "gift",
+   "name": {
+    "en": "Phalaenopsis Orchid in Ceramic Pot",
+    "zh": "蝴蝶蘭盆栽"
+   },
+   "price": 48,
+   "currency": "USD",
+   "merchant": "Red Lantern Gifts",
+   "shipsTo": [
+    "US",
+    "TW",
+    "HK"
+   ],
+   "tags": [
+    "flowers",
+    "plant",
+    "gift",
+    "lunar-new-year"
+   ],
+   "description": "Long-lasting purple orchid, a classic New Year gift for elders."
+  },
+  {
+   "id": "red-envelope-set",
+   "category": "home",
+   "name": {
+    "en": "Lunar New Year Red Envelopes (Gold Foil)",
+    "zh": "燙金新年紅包袋"
+   },
+   "price": 8.8,
+   "currency": "USD",
+   "merchant": "Red Lantern Gifts",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "red-envelope",
+    "lunar-new-year"
+   ],
+   "description": "Pack of red envelopes with gold fu characters."
+  },
+  {
+   "id": "massager-neck",
+   "category": "gift",
+   "name": {
+    "en": "Heated Neck and Shoulder Massager",
+    "zh": "熱敷肩頸按摩器"
+   },
+   "price": 68,
+   "currency": "USD",
+   "merchant": "Golden Years Health Co.",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "massager",
+    "warm",
+    "gift",
+    "elder-friendly",
+    "simple-buttons"
+   ],
+   "description": "Soothing heated massager with three big buttons; a thoughtful gift for parents and grandparents."
+  },
+  {
+   "id": "lamp-reading",
+   "category": "home",
+   "name": {
+    "en": "LED Reading Lamp with Big Touch Switch",
+    "zh": "大觸控開關LED閱讀燈"
+   },
+   "price": 32,
+   "currency": "USD",
+   "merchant": "Lotus Home Goods",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "lamp",
+    "reading",
+    "large-switch",
+    "elder-friendly",
+    "simple-buttons"
+   ],
+   "description": "Bright, flicker-free reading lamp with one large touch pad for on/off/brightness."
+  },
+  {
+   "id": "heater-safe",
+   "category": "home",
+   "name": {
+    "en": "Tip-Over-Safe Ceramic Space Heater",
+    "zh": "防傾倒陶瓷電暖器"
+   },
+   "price": 58,
+   "currency": "USD",
+   "merchant": "Lotus Home Goods",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "heater",
+    "warm",
+    "auto-shutoff",
+    "simple-buttons",
+    "elder-friendly"
+   ],
+   "description": "Quiet ceramic heater with tip-over and overheat shut-off; two big dials."
+  },
+  {
+   "id": "slippers-nonslip",
+   "category": "home",
+   "name": {
+    "en": "Non-Slip Warm House Slippers",
+    "zh": "防滑保暖室內拖鞋"
+   },
+   "price": 22.8,
+   "currency": "USD",
+   "merchant": "Harbor Warm Wear",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "slippers",
+    "warm",
+    "non-slip",
+    "elder-friendly"
+   ],
+   "description": "Fleece-lined slippers with a grippy non-slip sole and closed back to prevent falls."
+  },
+  {
+   "id": "nightlight-motion",
+   "category": "home",
+   "name": {
+    "en": "Motion-Sensor Night Lights, 3-Pack",
+    "zh": "感應式小夜燈（三入）"
+   },
+   "price": 19.8,
+   "currency": "USD",
+   "merchant": "Lotus Home Goods",
+   "shipsTo": [
+    "US",
+    "TW",
+    "CN",
+    "HK",
+    "CA"
+   ],
+   "tags": [
+    "night-light",
+    "safety",
+    "elder-friendly",
+    "automatic"
+   ],
+   "description": "Plug-in lights that turn on automatically at night for safe walks to the bathroom."
+  }
+ ]
+}
