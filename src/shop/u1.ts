@@ -61,7 +61,9 @@ export interface OrderInfo {
   /** What was bought, in English ("blood pressure monitor"), for "Mei ordered a new …". */
   what?: string;
 }
-export type VoteCard = (reader: FamilyMember) => Promise<string | string[]>;
+/** A card: text, or a rendered image (U1's cardImage.ts) plus a short text line with the letter and link. */
+export type VotePart = string | { text: string; image?: string };
+export type VoteCard = (reader: FamilyMember) => Promise<string | VotePart[]>;
 
 export function voteTimeoutMs(): number {
   const n = Number(process.env.SHOP_VOTE_TIMEOUT_MS);
@@ -260,7 +262,8 @@ function standInVote(family: Family, voters: FamilyMember[], card: VoteCard, opt
         if (closed) return;
         // With a heading + cards, part i (1..n) is option i-1; anything else uses the tapback letters.
         const cardIndex = parts.length > 1 && i >= 1 && i <= n ? i - 1 : undefined;
-        register(parts[i]!, cardIndex);
+        const part = parts[i]!;
+        register(typeof part === "string" ? part : part.text, cardIndex); // the stand-in sends text only
         if (SEND_GAP_MS) await new Promise((r) => setTimeout(r, SEND_GAP_MS));
         else await new Promise((r) => setImmediate(r)); // let the send start before the next one
       }

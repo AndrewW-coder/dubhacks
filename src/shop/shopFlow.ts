@@ -48,7 +48,8 @@ import { isElder, scamSignals, trustedConfirmers } from "../payments/scamCheck.j
 import { formatMoney, isSupportedCurrency, quote } from "../payments/visa.js";
 import { detectShoppingNeed, findOptions, type Option, type Product, type ShoppingNeed } from "./catalog.js";
 import { buyerMustConfirm, checkout } from "./checkout.js";
-import { familyVote, parseVote, passOn, trackOrder, voteTimeoutMs, type VoteCard } from "./u1.js";
+import { familyVote, parseVote, passOn, trackOrder, voteTimeoutMs, type VoteCard, type VotePart } from "./u1.js";
+import { cardImagesEnabled, featureLabels, iconFor, renderOptionCard } from "./cardImage.js";
 import type { Family, FamilyMember, IncomingMessage } from "../types.js";
 
 /** Swappable for tests (shopFlow.selftest.ts). */
@@ -348,7 +349,7 @@ function headingSentence(reader: FamilyMember, requester: FamilyMember, forMembe
  * the heading sentence, names the product lacks in the reader's language, the summaries and the
  * "demo product" label. Prices (quote(), no AI), merchants, ratings and URLs are added as they are.
  */
-async function cardsFor(family: Family, reader: FamilyMember, requester: FamilyMember, forMember: FamilyMember, what: string, options: Option[]): Promise<string[]> {
+async function cardsFor(family: Family, reader: FamilyMember, requester: FamilyMember, forMember: FamilyMember, what: string, options: Option[]): Promise<VotePart[]> {
   const n = options.length;
   const texts: string[] = [];
   const slot = (t: string) => texts.push(t) - 1;
@@ -357,6 +358,10 @@ async function cardsFor(family: Family, reader: FamilyMember, requester: FamilyM
   const nameAt = options.map((o, i) => (own[i] === undefined ? slot(englishName(o.product)) : -1));
   const blurbAt = options.map((o) => slot(summary(o)));
   const demoAt = options.some((o) => !linkOf(o.product)) ? slot("demo product") : -1;
+  // Image cards (U1's cardImage.ts): their labels and feature chips ride in the same batch call.
+  const images = cardImagesEnabled();
+  const labelAt = images ? { option: slot("Option"), pay: slot("Pay securely with Visa"), vote: slot("Tap ❤️ to vote") } : undefined;
+  const chipsAt = images ? options.map((o) => featureLabels(o.product.tags).map(slot)) : [];
   const [t, prices] = await Promise.all([translateBatch(texts, reader, family), Promise.all(options.map((o) => priceFor(reader, o.product)))]);
   // Remember a translated name (search results only have English), so the vote result and the
   // order confirmation show the same name without another AI call.
@@ -365,10 +370,32 @@ async function cardsFor(family: Family, reader: FamilyMember, requester: FamilyM
     if (name && name !== englishName(o.product) && o.product.name[reader.language] === undefined) o.product.name[reader.language] = name;
   });
   const legend = LETTERS.slice(0, n).map((l, i) => `${ICONS[i]} ${l}`).join(" · ");
-  return [
-    `🛍️ ${t[head]}\n${legend}`,
-    ...options.map((o, i) => renderCard(o, i, own[i] ?? t[nameAt[i]!]!, prices[i]!, t[blurbAt[i]!]!, demoAt >= 0 ? t[demoAt]! : "demo product")),
-  ];
+  const demo = demoAt >= 0 ? t[demoAt]! : "demo product";
+  const cards: VotePart[] = await Promise.all(
+    options.map(async (o, i) => {
+      const name = own[i] ?? t[nameAt[i]!]!;
+      const textCard = renderCard(o, i, name, prices[i]!, t[blurbAt[i]!]!, demo);
+      if (!labelAt) return textCard;
+      const p = o.product;
+      const image = await renderOptionCard({
+        letter: LETTERS[i]!,
+        name,
+        store: p.merchant,
+        rating: p.rating,
+        reviews: p.reviews,
+        price: prices[i]!,
+        altPrice: prices[i]!.startsWith("≈") ? formatMoney(p.price, p.currency) : undefined,
+        image: p.image,
+        icon: iconFor(p.category, p.tags),
+        why: t[blurbAt[i]!]!,
+        chips: chipsAt[i]!.map((k) => t[k]!),
+        labels: { option: t[labelAt.option]!, pay: t[labelAt.pay]!, vote: `${t[labelAt.vote]} ${LETTERS[i]}` },
+      });
+      // The image carries the details; the text under it is just the letter and the link (for the preview).
+      return image ? { image, text: `${LETTERS[i]} · ${name}\n${linkOf(p) ?? `(${demo})`}` } : textCard;
+    }),
+  );
+  return [`🛍️ ${t[head]}\n${legend}`, ...cards];
 }
 
 /** One option card on its own (one batch call). Names/prices/links are never translated; the URL is alone on the last line. */
