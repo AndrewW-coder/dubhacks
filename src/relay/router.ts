@@ -179,6 +179,8 @@ async function relayTapback(family: Family, sender: FamilyMember, msg: IncomingM
 }
 
 async function relayEdit(family: Family, sender: FamilyMember, msg: IncomingMessage) {
+  // iMessage also sends text-less "edits" (e.g. when a voice note is kept): never blank a copy.
+  if (!msg.text?.trim()) return;
   const original = map.findOriginal(msg.id);
   if (!original) return;
   map.updateOriginalText(original, msg.text ?? "");

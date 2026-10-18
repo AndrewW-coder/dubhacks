@@ -13,7 +13,8 @@
 //   - a letter A–D or 1–4, as a threaded reply to any of the vote's messages, or bare.
 //     A bare letter is NOT a vote while the voter has another Bridge question open
 //     (a translation review, a money question), so "A" reaches that question instead.
-// A voter with a money question in progress gets their cards once it closes (spec U2-13, M-2).
+// A voter with a money question in progress gets their cards once it closes (spec U2-13, M-2),
+// or after MAX_HOLD_MS at the latest: a bare answer still goes to that question either way.
 // Everything else is relayed as normal chat: "is B too heavy?" as a threaded reply to a
 // card threads onto the same card in everyone else's thread (cards are in messageMap).
 //
@@ -47,6 +48,7 @@ const TAPBACK_OPTION: Partial<Record<TapbackKind, number>> = { like: 0, love: 1,
 const NOT_VOTES = new Set<TapbackKind>(["dislike", "question"]);
 const CLEAR_ON_CARD = new Set<TapbackKind>(["love", "emphasize"]);
 const BUSY_POLL_MS = 250;
+const MAX_HOLD_MS = 10_000; // never hold someone's cards longer than this
 
 let voteSeq = 0;
 
@@ -112,9 +114,13 @@ export function familyVote(
 
     const sendCards = async (voter: FamilyMember) => {
       const raw = await card(voter);
-      // Hold the cards while another question is open, so a bare "yes"/"A" stays with it.
-      while (!closed && busy(voter)) await new Promise((r) => setTimeout(r, BUSY_POLL_MS));
+      // Hold the cards briefly while another question is open, so it stays the newest one.
+      const holdStart = Date.now();
+      if (busy(voter)) console.log(`[vote] holding ${voter.name}'s cards: another question is open`);
+      while (!closed && busy(voter) && Date.now() - holdStart < MAX_HOLD_MS) await new Promise((r) => setTimeout(r, BUSY_POLL_MS));
+      if (closed) return;
       const parts = Array.isArray(raw) ? raw : [raw];
+      console.log(`[vote] sending ${voter.name} ${parts.length} message(s)${parts.some((p) => typeof p !== "string" && p.image) ? " with card images" : ""}`);
       const ids: string[] = [];
       prompts.set(voter.id, ids);
       const cardIds: string[] = [];

@@ -58,7 +58,12 @@ export function renderOptionCard(data: CardData): Promise<string | undefined> {
   if (!cardImagesEnabled()) return Promise.resolve(undefined);
   const key = createHash("sha1").update(CSS).update(JSON.stringify(data)).digest("hex").slice(0, 16); // a design change re-renders
   if (!rendering.has(key)) {
-    const job = render(data, join(OUT_DIR, `${key}.png`)).catch((err) => {
+    const limit = (Number(process.env.CARD_IMAGE_TIMEOUT_MS) || 8000) + 4000;
+    const timedOut = new Promise<undefined>((r) => setTimeout(() => {
+      console.warn(`[cards] a card took over ${limit} ms; sending text instead`);
+      r(undefined);
+    }, limit).unref?.());
+    const job = Promise.race([render(data, join(OUT_DIR, `${key}.png`)), timedOut]).catch((err) => {
       console.error("[cards] couldn't render a card; sending text instead", err instanceof Error ? err.message : err);
       return undefined;
     });
