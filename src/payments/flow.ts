@@ -24,6 +24,9 @@
 // and the who/how-much line is built separately (review S-8).
 // Anything that is NOT a gift returns false (it's relayed as chat), and maybeOfferHelp()
 // (needs.ts) gets a look at it: a grandparent mentioning medicine, or asking for money.
+// Then the shopping flow (shop/shopFlow.ts tryHandleShopping): an explicit "find/buy X for Y"
+// command to Bridge returns true (not relayed); other messages are relayed and may start a
+// shopping decision in the background.
 //
 // Settings (optional, read from process.env here):
 //   PAYMENT_CONFIRM_TIMEOUT_MS   how long Bridge waits for a "yes" (default 180000 = 3 min)
@@ -34,6 +37,7 @@ import { callTool, hasClaude } from "../translate/claude.js";
 import { translate } from "../translate/translator.js";
 import { formatSignals, requiresConfirmation, scamSignals, trustedConfirmers } from "./scamCheck.js";
 import { maybeOfferHelp } from "./needs.js";
+import { tryHandleShopping } from "../shop/shopFlow.js";
 import { formatMoney, isSupportedCurrency, MAX_GIFT_USD as VISA_MAX_GIFT_USD, quote, sendGift, SUPPORTED_CURRENCIES } from "./visa.js";
 import type { Family, FamilyMember, IncomingMessage } from "../types.js";
 
@@ -90,9 +94,12 @@ interface MoneyIntent {
 export async function tryHandlePayment(family: Family, sender: FamilyMember, msg: IncomingMessage): Promise<boolean> {
   const text = msg.text ?? "";
   const handled = LOOKS_LIKE_MONEY.test(text) && (await handleGift(family, sender, text));
-  // Not a gift → relayed as normal chat. Grandparents' needs / money requests get a side flow.
-  if (!handled) maybeOfferHelp(family, sender, text);
-  return handled;
+  if (handled) return true;
+  // Not a gift. "find Nai Nai a …" (a command to Bridge) is handled by the shopping flow;
+  // anything else is relayed as normal chat, with needs / shopping as side flows.
+  if (await tryHandleShopping(family, sender, msg)) return true;
+  maybeOfferHelp(family, sender, text);
+  return false;
 }
 
 async function handleGift(family: Family, sender: FamilyMember, text: string): Promise<boolean> {

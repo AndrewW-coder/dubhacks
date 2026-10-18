@@ -39,13 +39,40 @@ export function trustedConfirmer(family: Family, requester: FamilyMember, recipi
   return trustedConfirmers(family, requester, recipient)[0];
 }
 
+// Gift cards, e-gift / prepaid / reward cards and redeemable codes: what scammers ask elders to
+// buy, because the "money" is gone as soon as the code is read out. Brands are matched only next
+// to a card/code word where the brand is also an everyday word (a steam iron, vanilla cookies).
+// Also used by shop/checkout.ts (scam target) and shop/catalog.ts (never shopping).
+const GIFT_BRANDS = "itunes|apple|app ?store|google ?play|steam|razer|vanilla|amazon|target|walmart|netflix|xbox|playstation|psn|nintendo|ebay|best ?buy|sephora";
+export const GIFT_CARD_MARKERS = new RegExp(
+  [
+    "\\be-?gift",
+    "\\bgift[- ]?cards?\\b",
+    "\\b(digital|wallet|store|game|gift|redeem|redemption|voucher|top[- ]?up|recharge) codes?\\b",
+    "\\bpin\\b",
+    "\\breward cards?\\b",
+    "\\bpre-?paid\\b",
+    "\\bitunes\\b",
+    "\\bapp ?store (card|code|credit|gift)",
+    "\\bapple (gift|store) (card|code)",
+    "\\bgoogle ?play\\b",
+    "\\bsteam (wallet|gift|card|code|credit|key)s?\\b",
+    "\\brazer\\b",
+    "\\bvanilla (visa|mastercard|gift|reward|prepaid|card)",
+    "\\bamazon(\\.com)? (e-?)?gift",
+    "礼品卡|禮品卡|购物卡|購物卡|充值卡|储值卡|儲值卡|预付卡|預付卡|点卡(?!片)|點卡(?!片)|点数卡|點數卡|游戏卡|遊戲卡|礼券|禮券|充值码|充值碼|兑换码|兌換碼",
+    `(${GIFT_BRANDS})\\s*(卡|充值|码|碼)`,
+  ].join("|"),
+  "i",
+);
+
 // Each rule: what to look for, and the reason shown to the confirmer.
 const MONEY_WORDS = /[$¥€£₩]|\d|\b(money|cash|pay|send|transfer|dollars?|bucks)\b|钱|錢|元|块|塊|转账|轉帳|汇款|匯款/i;
 const URGENT_WORDS = /\b(urgent|urgently|right now|right away|immediately|asap|hurry|today only|emergency fee)\b|紧急|緊急|很急|马上|馬上|立刻|立即|赶快|趕快|快点|快點/i;
 
 const RULES: { test: (text: string) => boolean; reason: string }[] = [
   {
-    test: (t) => /\bgift ?cards?\b|\b(itunes|apple|google play|steam|amazon) (gift )?cards?\b|礼品卡|禮品卡|购物卡|購物卡|充值卡|点数卡|點數卡/i.test(t),
+    test: (t) => GIFT_CARD_MARKERS.test(t),
     reason: "mentions gift cards: a common scam",
   },
   {
