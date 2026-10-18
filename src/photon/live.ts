@@ -202,7 +202,7 @@ export class LivePhotonClient implements MessagingPort {
   async sendText(toHandle: string, text: string, opts?: { replyToId?: string }): Promise<string> {
     const space = await this.spaceFor(toHandle);
     const target = opts?.replyToId ? await this.find(space, opts.replyToId) : undefined;
-    return this.remember(await space.send(target ? reply(text, target) : text));
+    return this.remember(await timed(`text to ${toHandle}`, space.send(target ? reply(text, target) : text)));
   }
 
   async sendTapback(toHandle: string, messageId: string, tapback: TapbackKind, remove = false) {
@@ -216,25 +216,25 @@ export class LivePhotonClient implements MessagingPort {
     }
     const target = await this.find(space, messageId);
     if (!target) return console.warn(`[photon] tapback target ${messageId} not found`);
-    const sent = await space.send(reaction(Emoji[tapback], target));
+    const sent = await timed(`tapback to ${toHandle}`, space.send(reaction(Emoji[tapback], target)));
     if (sent) this.myTapbacks.set(key, sent);
   }
 
   async editMessage(toHandle: string, messageId: string, newText: string) {
     const space = await this.spaceFor(toHandle);
-    await space.edit(await this.find(space, messageId), newText);
+    await timed(`edit to ${toHandle}`, space.edit(await this.find(space, messageId), newText));
   }
 
   async unsendMessage(toHandle: string, messageId: string) {
     const space = await this.spaceFor(toHandle);
-    await space.unsend(await this.find(space, messageId));
+    await timed(`unsend to ${toHandle}`, space.unsend(await this.find(space, messageId)));
   }
 
   async sendFile(toHandle: string, filePath: string, opts?: { replyToId?: string; asVoiceNote?: boolean }) {
     const space = await this.spaceFor(toHandle);
     const file = opts?.asVoiceNote ? voice(filePath) : attachment(filePath);
     const target = opts?.replyToId ? await this.find(space, opts.replyToId) : undefined;
-    return this.remember(await space.send(target ? reply(file, target) : file));
+    return this.remember(await timed(`file to ${toHandle}`, space.send(target ? reply(file, target) : file)));
   }
 
   async downloadAttachment(attachmentId: string, fileName: string): Promise<string> {
@@ -253,6 +253,32 @@ export class LivePhotonClient implements MessagingPort {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
+
+const SEND_TIMEOUT_MS = Number(process.env.PHOTON_SEND_TIMEOUT_MS) || 30_000;
+
+/**
+ * Every send has a time limit and is logged when slow, so one stuck send (Photon has stalled on a
+ * single chat) fails visibly instead of silently blocking that person's next messages.
+ */
+async function timed<T>(what: string, p: Promise<T>): Promise<T> {
+  const started = Date.now();
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      p,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Photon didn't confirm the ${what} within ${SEND_TIMEOUT_MS / 1000}s`)), SEND_TIMEOUT_MS);
+      }),
+    ]);
+  } catch (err) {
+    console.error(`[photon] send failed: ${what} (${err instanceof Error ? err.message : err})`);
+    throw err;
+  } finally {
+    clearTimeout(timer);
+    const ms = Date.now() - started;
+    if (ms > 5_000) console.warn(`[photon] slow send: ${what} took ${Math.round(ms / 1000)}s`);
+  }
+}
 
 function dispatch(handler: Handler, msg: IncomingMessage) {
   handler(msg).catch((err) => console.error("[photon] handler failed", msg.id, err));

@@ -59,6 +59,8 @@ export async function handleIncoming(msg: IncomingMessage): Promise<void> {
       // transcribe() never throws: on failure it returns a "(voice note — …)" placeholder (see
       // media/voice.ts). Never translate that: forward the recording itself instead.
       if (/^\(voice note — /.test(transcript)) return relayRecording(family, sender, msg, path);
+      // A spoken need or request ("我的血压计坏了…") goes through the same money/shopping check as typed text.
+      if (await tryHandlePayment(family, sender, { ...msg, kind: "text", text: transcript })) return; // [U2]
       return relayText(family, sender, msg, transcript, "🎤 ");
       // TODO [U1] optionally also forward the original audio, or send synthesize() output (U2) back
     }
@@ -179,6 +181,8 @@ async function relayTapback(family: Family, sender: FamilyMember, msg: IncomingM
 }
 
 async function relayEdit(family: Family, sender: FamilyMember, msg: IncomingMessage) {
+  // iMessage also sends text-less "edits" (e.g. when a voice note is kept): never blank a copy.
+  if (!msg.text?.trim()) return;
   const original = map.findOriginal(msg.id);
   if (!original) return;
   map.updateOriginalText(original, msg.text ?? "");

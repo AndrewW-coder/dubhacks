@@ -13,7 +13,8 @@
 //   - a letter A–D or 1–4, as a threaded reply to any of the vote's messages, or bare.
 //     A bare letter is NOT a vote while the voter has another Bridge question open
 //     (a translation review, a money question), so "A" reaches that question instead.
-// A voter with a money question in progress gets their cards once it closes (spec U2-13, M-2).
+// A voter with a money question in progress gets their cards once it closes (spec U2-13, M-2),
+// or after MAX_HOLD_MS at the latest: a bare answer still goes to that question either way.
 // Everything else is relayed as normal chat: "is B too heavy?" as a threaded reply to a
 // card threads onto the same card in everyone else's thread (cards are in messageMap).
 //
@@ -47,6 +48,8 @@ const TAPBACK_OPTION: Partial<Record<TapbackKind, number>> = { like: 0, love: 1,
 const NOT_VOTES = new Set<TapbackKind>(["dislike", "question"]);
 const CLEAR_ON_CARD = new Set<TapbackKind>(["love", "emphasize"]);
 const BUSY_POLL_MS = 250;
+const MAX_HOLD_MS = 10_000; // never hold someone's cards longer than this
+const IMAGE_SEND_MS = 20_000; // an image that hasn't sent by then is replaced by its text card
 
 let voteSeq = 0;
 
@@ -111,10 +114,16 @@ export function familyVote(
     };
 
     const sendCards = async (voter: FamilyMember) => {
+      const t0 = Date.now();
       const raw = await card(voter);
-      // Hold the cards while another question is open, so a bare "yes"/"A" stays with it.
-      while (!closed && busy(voter)) await new Promise((r) => setTimeout(r, BUSY_POLL_MS));
+      console.log(`[vote] ${voter.name}: cards ready in ${Math.round((Date.now() - t0) / 1000)}s`);
+      // Hold the cards briefly while another question is open, so it stays the newest one.
+      const holdStart = Date.now();
+      if (busy(voter)) console.log(`[vote] holding ${voter.name}'s cards: another question is open`);
+      while (!closed && busy(voter) && Date.now() - holdStart < MAX_HOLD_MS) await new Promise((r) => setTimeout(r, BUSY_POLL_MS));
+      if (closed) return;
       const parts = Array.isArray(raw) ? raw : [raw];
+      console.log(`[vote] sending ${voter.name} ${parts.length} message(s)${parts.some((p) => typeof p !== "string" && p.image) ? " with card images" : ""}`);
       const ids: string[] = [];
       prompts.set(voter.id, ids);
       const cardIds: string[] = [];
@@ -125,20 +134,38 @@ export function familyVote(
         const cardIndex = parts.length > 1 && i >= 1 && i <= n ? i - 1 : undefined;
         const part = parts[i]!;
         const messages = typeof part === "string" ? [{ text: part }] : part.image ? [{ text: "", file: part.image, key: "img" }, { text: part.text }] : [{ text: part.text }];
+        let textAlreadySent = false;
         for (const m of messages) {
           if (closed) return;
-          const { messageId, answer } = await openPrompt(voter.handle, m.text, {
-            timeoutMs: timeoutMs + 5_000,
-            accept: (a) => optionFor(voter, a, cardIndex) !== undefined,
-            filePath: "file" in m ? m.file : undefined,
-          });
+          if (textAlreadySent) break;
+          const prompt = (text: string, filePath?: string) =>
+            openPrompt(voter.handle, text, { timeoutMs: timeoutMs + 5_000, accept: (a) => optionFor(voter, a, cardIndex) !== undefined, filePath });
+          let sent: Awaited<ReturnType<typeof prompt>>;
+          let key = "key" in m ? `-${m.key}` : "";
+          if ("file" in m) {
+            // A stuck image upload must never hold up this person's other cards: fall back to the text line.
+            const image = await withTimeout(prompt("", m.file), IMAGE_SEND_MS).catch((err) => {
+              console.warn(`[vote] card image to ${voter.name} didn't send (${err instanceof Error ? err.message : err}); sending the text card`);
+              return undefined;
+            });
+            if (image) sent = image;
+            else {
+              sent = await prompt(typeof part === "string" ? part : part.text);
+              textAlreadySent = true;
+              key = "";
+            }
+          } else {
+            sent = await prompt(m.text);
+          }
+          const { messageId, answer } = sent;
+          console.log(`[vote] ${voter.name}: sent part ${i + 1}/${parts.length}${"file" in m && !textAlreadySent ? " (image)" : ""}`);
           ids.push(messageId);
           if (cardIndex !== undefined) cardIds[cardIndex] ??= messageId; // votes show on the image when there is one
           if (closed) cancel(messageId);
           // Each part is a shared "original" with one copy per voter, so threaded replies and
           // tapbacks that aren't votes land on the same card in everyone else's thread.
           // (Copies only: there is no sender's original, so nothing is ever mirrored back to "Bridge".)
-          map.recordRelay(`${id}-part-${i}${"key" in m ? `-${m.key}` : ""}`, voter.handle, messageId);
+          map.recordRelay(`${id}-part-${i}${key}`, voter.handle, messageId);
           void answer.then((a) => {
             if (!a) return; // withdrawn or timed out
             const option = optionFor(voter, a, cardIndex);
@@ -149,14 +176,20 @@ export function familyVote(
           });
         }
       }
+      console.log(`[vote] ${voter.name}: all cards sent`);
       // Cards that went out late (held for another question) still show the votes so far.
       for (const other of voters) mirror(other, voter);
     };
 
     for (const voter of voters) {
-      sendCards(voter).catch((err) => console.error("[vote] couldn't send the cards to", voter.id, err));
+      sendCards(voter).catch((err) => console.error(`[vote] couldn't send the cards to ${voter.name}:`, err instanceof Error ? err.message : err));
     }
   });
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  return Promise.race([p, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`timed out after ${ms} ms`)), ms); })]).finally(() => clearTimeout(timer));
 }
 
 /** Another Bridge question open for this voter, besides the vote's own prompts? */
