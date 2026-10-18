@@ -141,7 +141,7 @@ async function main() {
   process.env.LLM_BASE_URL = llm.url;
 
   const { detectShoppingNeed, findOptions, culturalProblem, loadCatalog, luckyAmount, quickNeed } = await import("./catalog.js");
-  const { searchProducts, clearSearchCache, currencyOf } = await import("./search.js");
+  const { searchProducts, clearSearchCache, currencyOf, mapResult } = await import("./search.js");
   type ShoppingNeed = import("./catalog.js").ShoppingNeed;
   type Family = import("../types.js").Family;
 
@@ -359,6 +359,8 @@ async function main() {
     threw = true;
   }
   check("never throws on odd input", !threw);
+  const spaced = mapResult({ title: "Omron 3 Series", extracted_price: 39.99, source: "Target", product_link: "https://www.google.com/search?ibp=oshop&q=large display blood pressure monitor&prds=catalogid:1" });
+  check("SerpApi product_link with spaces → one encoded link", spaced?.url === "https://www.google.com/search?ibp=oshop&q=large%20display%20blood%20pressure%20monitor&prds=catalogid:1", spaced?.url);
   check("luckyAmount ends in 8", luckyAmount(50) === 58 && luckyAmount(100) === 108 && luckyAmount(58) === 58 && luckyAmount(59) === 68);
 
   serp.server.close();

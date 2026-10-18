@@ -147,7 +147,7 @@ function numberFrom(v: unknown): number | undefined {
 function httpsUrl(v: unknown): string | undefined {
   if (typeof v !== "string" || !/^https?:\/\//i.test(v.trim())) return undefined;
   // SerpApi's Google Shopping links contain raw spaces ("q=blood pressure monitor") and "|".
-  // Encode them: iMessage cuts a link at the first space, and the card only shows links with none.
+  // Encode them, so the link stays one clickable token and iMessage can preview it.
   try {
     return new URL(v.trim()).href.replace(/\|/g, "%7C");
   } catch {

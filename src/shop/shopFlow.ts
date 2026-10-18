@@ -166,7 +166,11 @@ async function startDecision(family: Family, requester: FamilyMember, need: Shop
   decisions.set(family.id, decision); // synchronous claim: two needs can't both start
   let options: Option[];
   try {
-    options = (await shopDeps.findOptions(family, need)).slice(0, MAX_OPTIONS);
+    // This decision's own copies: translated names are remembered on them (cardsFor), never on
+    // shared catalog objects.
+    options = (await shopDeps.findOptions(family, need))
+      .slice(0, MAX_OPTIONS)
+      .map((o) => ({ ...o, product: { ...o.product, name: { ...o.product.name } } }));
   } catch (err) {
     console.error("[shop] findOptions failed", err);
     options = [];
@@ -341,6 +345,12 @@ async function cardsFor(family: Family, reader: FamilyMember, requester: FamilyM
   const blurbAt = options.map((o) => slot(summary(o)));
   const demoAt = options.some((o) => !linkOf(o.product)) ? slot("demo product") : -1;
   const [t, prices] = await Promise.all([translateBatch(texts, reader, family), Promise.all(options.map((o) => priceFor(reader, o.product)))]);
+  // Remember a translated name (search results only have English), so the vote result and the
+  // order confirmation show the same name without another AI call.
+  options.forEach((o, i) => {
+    const name = nameAt[i]! >= 0 ? t[nameAt[i]!]?.trim() : undefined;
+    if (name && name !== englishName(o.product) && o.product.name[reader.language] === undefined) o.product.name[reader.language] = name;
+  });
   const legend = LETTERS.slice(0, n).map((l, i) => `${ICONS[i]} ${l}`).join(" · ");
   return [
     `🛍️ ${t[head]}\n${legend}`,

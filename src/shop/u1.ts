@@ -85,7 +85,7 @@ export function shipTo(member: FamilyMember): { city: string; country: string } 
 /** `opts.tieBreaker`: member id whose pick wins a tie (the buyer). Only U1's familyVote supports it. */
 export interface VoteOptions { tieBreaker?: string }
 type VoteModule = { familyVote: (f: Family, v: FamilyMember[], c: VoteCard, n: number, t: number, o?: VoteOptions) => Promise<VoteResult> };
-type OrdersModule = { trackOrder: (f: Family, b: FamilyMember, m: FamilyMember, p: Product, o: OrderResult) => void };
+type OrdersModule = { trackOrder: (f: Family, b: FamilyMember, m: FamilyMember, p: Product, o: OrderResult, info?: OrderInfo) => void };
 
 const VOTE_MODULE = "../relay/vote.js";
 const ORDERS_MODULE = "./orders.js";
@@ -119,7 +119,7 @@ export async function familyVote(family: Family, voters: FamilyMember[], card: V
 
 export function trackOrder(family: Family, buyer: FamilyMember, forMember: FamilyMember, product: Product, order: OrderResult, info: OrderInfo = {}): void {
   void optional<OrdersModule>(ORDERS_MODULE, "trackOrder")
-    .then((mod) => (mod ? mod.trackOrder(family, buyer, forMember, product, order) : standInTrackOrder(family, buyer, forMember, product, order, info)))
+    .then((mod) => (mod ? mod.trackOrder(family, buyer, forMember, product, order, info) : standInTrackOrder(family, buyer, forMember, product, order, info)))
     .catch((err) => console.error("[shop] order confirmation failed", err));
 }
 
@@ -179,12 +179,21 @@ function standInVote(family: Family, voters: FamilyMember[], card: VoteCard, opt
   const votes = new Map<string, number>();
   const how = new Map<string, VoteHow>();
   let closed = false;
+  // With User 1's prompts.ts (openPrompt + cancel), the vote's cards are withdrawn when it closes,
+  // so leftover cards never make a voter look "busy" in the next decision.
+  const pm = promptsModule as unknown as {
+    openPrompt?: (h: string, t: string, o: { timeoutMs: number }) => Promise<{ messageId: string; answer: Promise<Answer | null> }>;
+    cancel?: (id: string) => boolean;
+  };
+  const canCancel = typeof pm.openPrompt === "function" && typeof pm.cancel === "function";
+  const promptIds: string[] = [];
 
   return new Promise<VoteResult>((resolve) => {
     const finish = () => {
       if (closed) return;
       closed = true;
       clearTimeout(timer);
+      if (canCancel) promptIds.splice(0).forEach((id) => pm.cancel!(id));
       resolve({ winner: tally(votes, n), votes, how });
     };
     const timer = setTimeout(finish, timeoutMs);
@@ -229,7 +238,14 @@ function standInVote(family: Family, voters: FamilyMember[], card: VoteCard, opt
 
       const register = (text: string, cardIndex: number | undefined) => {
         open++;
-        void ask(voter.handle, text, promptMs)
+        const answer = canCancel
+          ? pm.openPrompt!(voter.handle, text, { timeoutMs: promptMs }).then(({ messageId, answer: a }) => {
+              if (closed) pm.cancel!(messageId);
+              else promptIds.push(messageId);
+              return a;
+            })
+          : ask(voter.handle, text, promptMs);
+        void answer
           .then((a) => onAnswer(a, cardIndex))
           .catch((err) => console.error("[shop] vote prompt failed", err));
       };
