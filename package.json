@@ -25,6 +25,7 @@
     "heic-convert": "^2.1.0",
     "nice-grpc": "^2.1.11",
     "nice-grpc-common": "^2.0.2",
+    "puppeteer-core": "^23.11.1",
     "spectrum-ts": "^12.11.0"
   },
   "devDependencies": {
