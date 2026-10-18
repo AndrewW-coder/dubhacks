@@ -82,7 +82,9 @@ export function shipTo(member: FamilyMember): { city: string; country: string } 
 
 // ── Optional User 1 modules ─────────────────────────────────────────────────
 
-type VoteModule = { familyVote: (f: Family, v: FamilyMember[], c: VoteCard, n: number, t: number) => Promise<VoteResult> };
+/** `opts.tieBreaker`: member id whose pick wins a tie (the buyer). Only U1's familyVote supports it. */
+export interface VoteOptions { tieBreaker?: string }
+type VoteModule = { familyVote: (f: Family, v: FamilyMember[], c: VoteCard, n: number, t: number, o?: VoteOptions) => Promise<VoteResult> };
 type OrdersModule = { trackOrder: (f: Family, b: FamilyMember, m: FamilyMember, p: Product, o: OrderResult) => void };
 
 const VOTE_MODULE = "../relay/vote.js";
@@ -109,9 +111,9 @@ async function optional<T>(specifier: string, fn: string): Promise<T | undefined
   return (await loaded.get(specifier)) as T | undefined;
 }
 
-export async function familyVote(family: Family, voters: FamilyMember[], card: VoteCard, optionCount: number, timeoutMs: number): Promise<VoteResult> {
+export async function familyVote(family: Family, voters: FamilyMember[], card: VoteCard, optionCount: number, timeoutMs: number, opts: VoteOptions = {}): Promise<VoteResult> {
   const mod = await optional<VoteModule>(VOTE_MODULE, "familyVote");
-  if (mod) return mod.familyVote(family, voters, card, optionCount, timeoutMs);
+  if (mod) return mod.familyVote(family, voters, card, optionCount, timeoutMs, opts);
   return standInVote(family, voters, card, optionCount, timeoutMs);
 }
 

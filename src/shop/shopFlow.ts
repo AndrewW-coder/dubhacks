@@ -201,8 +201,9 @@ async function runDecision(
     return parts;
   };
 
-  const result = await shopDeps.familyVote(family, voters, card, options.length, voteTimeoutMs());
+  // The buyer is known before the vote: on a split vote, the buyer's pick wins.
   const buyer = pickBuyer(family, requester, forMember);
+  const result = await shopDeps.familyVote(family, voters, card, options.length, voteTimeoutMs(), { tieBreaker: buyer?.id });
   if (!buyer) {
     await Promise.all(voters.map((m) => tell(m, "There's nobody in the family who can pay for this, so I didn't buy anything.", family)));
     return;

@@ -18,12 +18,17 @@
 // VoteResult.how says how each member voted. Only "card" (❤️ or ‼️ on that option's own
 // card) is clear enough for the shopping flow to treat as the buyer's agreement.
 //
-// Closes when a majority agrees, everyone has voted, or `timeoutMs` passes (most votes,
-// ties to the earliest option, nobody → null). The vote's prompts are then withdrawn.
+// Everyone sees the votes as they come in: each vote is mirrored as a tapback on that card in
+// the other voters' threads (the voter's own tapback kind, or 👍 for a letter).
+//
+// Closes when a majority agrees, everyone has voted, or `timeoutMs` passes. Most votes wins; a
+// tie goes to `opts.tieBreaker`'s pick (the shopping flow passes the buyer), else the earliest
+// option; nobody → null. The vote's prompts are then withdrawn.
 
 import { cancel, hasOtherOpenPrompt, openPrompt, type Answer } from "./prompts.js";
 import * as map from "./messageMap.js";
 import { hasOpenMoneyPrompt } from "../payments/flow.js";
+import { sendTapback } from "../photon/client.js";
 import type { Family, FamilyMember, TapbackKind } from "../types.js";
 
 export type VoteHow = "card" | "tapback" | "letter";
@@ -48,12 +53,15 @@ export function familyVote(
   card: VoteCard,
   optionCount: number,
   timeoutMs: number,
+  opts: { tieBreaker?: string } = {}, // member id whose pick breaks a tie
 ): Promise<VoteResult> {
   const n = Math.max(1, Math.min(optionCount, LETTERS.length));
   const id = `vote-${++voteSeq}`;
   const votes = new Map<string, number>();
   const how = new Map<string, VoteHow>();
   const prompts = new Map<string, string[]>(); // member id → this vote's open prompt IDs
+  const cards = new Map<string, string[]>(); // member id → card message IDs by option (heading + cards layout only)
+  const shown = new Map<string, TapbackKind>(); // member id → tapback that shows their vote to others
   let closed = false;
 
   return new Promise<VoteResult>((resolve) => {
@@ -62,13 +70,25 @@ export function familyVote(
       closed = true;
       clearTimeout(timer);
       for (const ids of prompts.values()) ids.forEach(cancel);
-      resolve({ winner: tally(votes, n), votes, how });
+      resolve({ winner: tally(votes, n, opts.tieBreaker), votes, how });
     };
     const timer = setTimeout(finish, timeoutMs);
 
-    const record = (voter: FamilyMember, option: number, kind: VoteHow) => {
+    /** Show `voter`'s vote as a tapback on that card in `reader`'s thread. */
+    const mirror = (voter: FamilyMember, reader: FamilyMember) => {
+      const option = votes.get(voter.id);
+      const target = option === undefined ? undefined : cards.get(reader.id)?.[option];
+      if (!target || reader.id === voter.id) return;
+      sendTapback(reader.handle, target, shown.get(voter.id) ?? "like").catch((err) =>
+        console.error("[vote] couldn't show the vote to", reader.id, err),
+      );
+    };
+
+    const record = (voter: FamilyMember, option: number, kind: VoteHow, tapback?: TapbackKind) => {
       votes.set(voter.id, option);
       how.set(voter.id, kind);
+      shown.set(voter.id, tapback ?? "like");
+      for (const reader of voters) mirror(voter, reader);
       (prompts.get(voter.id) ?? []).forEach(cancel); // done voting: their other cards stop taking answers
       const counts = countVotes(votes, n);
       if (votes.size >= voters.length || counts.some((c) => c > voters.length / 2)) finish();
@@ -94,6 +114,8 @@ export function familyVote(
       const parts = Array.isArray(raw) ? raw : [raw];
       const ids: string[] = [];
       prompts.set(voter.id, ids);
+      const cardIds: string[] = [];
+      if (parts.length > 1) cards.set(voter.id, cardIds);
       for (let i = 0; i < parts.length; i++) {
         if (closed) return;
         // With a heading + cards, part i (1..n) is option i-1.
@@ -103,6 +125,7 @@ export function familyVote(
           accept: (a) => optionFor(voter, a, cardIndex) !== undefined,
         });
         ids.push(messageId);
+        if (cardIndex !== undefined) cardIds[cardIndex] = messageId;
         if (closed) cancel(messageId);
         // Each part is a shared "original" with one copy per voter, so threaded replies and
         // tapbacks that aren't votes land on the same card in everyone else's thread.
@@ -114,9 +137,11 @@ export function familyVote(
           if (option === undefined) return;
           const kind: VoteHow =
             a.via === "text" ? "letter" : cardIndex === option && CLEAR_ON_CARD.has(a.tapback) ? "card" : "tapback";
-          record(voter, option, kind);
+          record(voter, option, kind, a.via === "tapback" ? a.tapback : undefined);
         });
       }
+      // Cards that went out late (held for another question) still show the votes so far.
+      for (const other of voters) mirror(other, voter);
     };
 
     for (const voter of voters) {
@@ -144,12 +169,12 @@ function countVotes(votes: Map<string, number>, n: number): number[] {
   return counts;
 }
 
-/** Most votes; ties go to the earliest option; no votes → null. */
-function tally(votes: Map<string, number>, n: number): number | null {
+/** Most votes; a tie goes to `tieBreaker`'s pick if it's among the tied, else the earliest; no votes → null. */
+function tally(votes: Map<string, number>, n: number, tieBreaker?: string): number | null {
   const counts = countVotes(votes, n);
-  let best = -1;
-  counts.forEach((c, i) => {
-    if (c > 0 && (best < 0 || c > counts[best]!)) best = i;
-  });
-  return best < 0 ? null : best;
+  const top = Math.max(...counts);
+  if (top === 0) return null;
+  const pick = tieBreaker === undefined ? undefined : votes.get(tieBreaker);
+  if (pick !== undefined && counts[pick] === top) return pick;
+  return counts.findIndex((c) => c === top);
 }
