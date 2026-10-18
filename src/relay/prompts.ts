@@ -9,7 +9,7 @@
 // with an `accept` filter only takes the answers it wants; anything else (e.g. a
 // threaded "is B too heavy?" on a vote card) is relayed as normal chat.
 
-import { sendText } from "../photon/client.js";
+import { sendFile, sendText } from "../photon/client.js";
 import type { IncomingMessage, TapbackKind } from "../types.js";
 
 export type Answer =
@@ -69,9 +69,11 @@ export async function askFirst(
 export async function openPrompt(
   handle: string,
   text: string,
-  opts: { timeoutMs: number; accept?: (a: Answer) => boolean; replyToId?: string },
+  opts: { timeoutMs: number; accept?: (a: Answer) => boolean; replyToId?: string; filePath?: string },
 ): Promise<{ messageId: string; answer: Promise<Answer | null> }> {
-  const messageId = await sendText(handle, text, opts.replyToId ? { replyToId: opts.replyToId } : undefined);
+  // With `filePath`, the question is that image/file (text is ignored), e.g. a shopping card.
+  const reply = opts.replyToId ? { replyToId: opts.replyToId } : undefined;
+  const messageId = opts.filePath ? await sendFile(handle, opts.filePath, reply) : await sendText(handle, text, reply);
   const answer = new Promise<Answer | null>((resolve) => {
     const timer = setTimeout(() => {
       pending.delete(messageId);

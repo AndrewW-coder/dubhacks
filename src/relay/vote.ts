@@ -4,6 +4,8 @@
 //
 // `card(reader)` returns one message, or a heading + one card per option:
 //   [heading, card A, card B, …]  each sent as its own message, in order.
+// A card may be { text, image }: the image (a rendered card) is sent first, then the text
+// (letter + link). Both are that option's card: a tapback on either is a vote for it.
 //
 // What counts as a vote (first vote per person wins):
 //   - a tapback on option card i → option i (any kind but 👎 / ❓, which aren't votes);
@@ -37,7 +39,8 @@ export interface VoteResult {
   votes: Map<string, number>; // member id → option index
   how: Map<string, VoteHow>; // member id → how they voted
 }
-export type VoteCard = (reader: FamilyMember) => Promise<string | string[]>;
+export type VotePart = string | { text: string; image?: string };
+export type VoteCard = (reader: FamilyMember) => Promise<string | VotePart[]>;
 
 const LETTERS = ["A", "B", "C", "D"];
 const TAPBACK_OPTION: Partial<Record<TapbackKind, number>> = { like: 0, love: 1, laugh: 2, emphasize: 3 };
@@ -120,25 +123,31 @@ export function familyVote(
         if (closed) return;
         // With a heading + cards, part i (1..n) is option i-1.
         const cardIndex = parts.length > 1 && i >= 1 && i <= n ? i - 1 : undefined;
-        const { messageId, answer } = await openPrompt(voter.handle, parts[i]!, {
-          timeoutMs: timeoutMs + 5_000,
-          accept: (a) => optionFor(voter, a, cardIndex) !== undefined,
-        });
-        ids.push(messageId);
-        if (cardIndex !== undefined) cardIds[cardIndex] = messageId;
-        if (closed) cancel(messageId);
-        // Each part is a shared "original" with one copy per voter, so threaded replies and
-        // tapbacks that aren't votes land on the same card in everyone else's thread.
-        // (Copies only: there is no sender's original, so nothing is ever mirrored back to "Bridge".)
-        map.recordRelay(`${id}-part-${i}`, voter.handle, messageId);
-        void answer.then((a) => {
-          if (!a) return; // withdrawn or timed out
-          const option = optionFor(voter, a, cardIndex);
-          if (option === undefined) return;
-          const kind: VoteHow =
-            a.via === "text" ? "letter" : cardIndex === option && CLEAR_ON_CARD.has(a.tapback) ? "card" : "tapback";
-          record(voter, option, kind, a.via === "tapback" ? a.tapback : undefined);
-        });
+        const part = parts[i]!;
+        const messages = typeof part === "string" ? [{ text: part }] : part.image ? [{ text: "", file: part.image, key: "img" }, { text: part.text }] : [{ text: part.text }];
+        for (const m of messages) {
+          if (closed) return;
+          const { messageId, answer } = await openPrompt(voter.handle, m.text, {
+            timeoutMs: timeoutMs + 5_000,
+            accept: (a) => optionFor(voter, a, cardIndex) !== undefined,
+            filePath: "file" in m ? m.file : undefined,
+          });
+          ids.push(messageId);
+          if (cardIndex !== undefined) cardIds[cardIndex] ??= messageId; // votes show on the image when there is one
+          if (closed) cancel(messageId);
+          // Each part is a shared "original" with one copy per voter, so threaded replies and
+          // tapbacks that aren't votes land on the same card in everyone else's thread.
+          // (Copies only: there is no sender's original, so nothing is ever mirrored back to "Bridge".)
+          map.recordRelay(`${id}-part-${i}${"key" in m ? `-${m.key}` : ""}`, voter.handle, messageId);
+          void answer.then((a) => {
+            if (!a) return; // withdrawn or timed out
+            const option = optionFor(voter, a, cardIndex);
+            if (option === undefined) return;
+            const kind: VoteHow =
+              a.via === "text" ? "letter" : cardIndex === option && CLEAR_ON_CARD.has(a.tapback) ? "card" : "tapback";
+            record(voter, option, kind, a.via === "tapback" ? a.tapback : undefined);
+          });
+        }
       }
       // Cards that went out late (held for another question) still show the votes so far.
       for (const other of voters) mirror(other, voter);
