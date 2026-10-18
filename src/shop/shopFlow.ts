@@ -263,6 +263,12 @@ async function runDecision(
 function winnerSentence(votes: number, reader: FamilyMember, buyer: FamilyMember, forMember: FamilyMember, confirm: boolean): string {
   const chose = `The family chose this (${votes === 1 ? "1 vote" : `${votes} votes`}).`;
   const to = reader.id === forMember.id ? "you" : forMember.name;
+  // SHOP_MODE=paylink (checkout.ts): the buyer always pays on a Visa checkout page Bridge sends them.
+  if (process.env.SHOP_MODE?.trim().toLowerCase() === "paylink") {
+    return reader.id === buyer.id
+      ? `${chose} I'll send you a Visa payment link for it; I order it for ${forMember.name} once it's paid.`
+      : `${chose} Waiting for ${buyer.name} to pay with Visa before ordering it for ${to}.`;
+  }
   if (reader.id === buyer.id) return confirm ? `${chose} I'll ask you to confirm before I buy it for ${forMember.name}.` : `${chose} Checking out for ${forMember.name} with your card.`;
   return confirm ? `${chose} Waiting for ${buyer.name} to confirm before buying it for ${to}.` : `${chose} ${buyer.name} is buying it for ${to}.`;
 }

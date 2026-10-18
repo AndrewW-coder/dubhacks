@@ -16,7 +16,7 @@ Bridge is an iMessage agent. Each family member has a 1:1 thread with Bridge, wh
 - **Personalization.** Bridge searches Google Shopping through SerpApi (real links), or an offline catalog without a key, and picks **3 options that fit her**: in budget, ships to her country, elder-friendly features (large display, simple buttons, Chinese voice) ranked higher, each with a "why this one". Cultural rules are enforced in code: no clocks as gifts (送钟 sounds like attending a funeral), no sets of four (四 sounds like 死), no pears (分梨, separation), no white or black flowers.
 - **Decision-making.** Every member gets the same 3 options as cards A/B/C **in their own language and currency** (Nai Nai sees NT$, Kevin sees $), with the link on its own line for an iMessage preview. The family talks it over, then votes with a tapback or a letter. Votes are never relayed.
 - **Checkout.** The buyer is whoever asked, or the member trusted with money. Under their limit, the vote is the approval; over it, they must answer ❤️ or "yes". Scam-target purchases involving a grandparent (gift cards, crypto, wire transfers) need a trusted member's approval first.
-- **Payments.** Checkout is mock for the demo; a sandbox mode is wired to Visa Direct until we have the Visa booth's card API. [TODO: what we used from the Visa booth.]
+- **Payments.** When the family has picked, Bridge texts the buyer a real **Visa checkout link** (Visa Acceptance invoicing, sandbox). The buyer pays on Visa's own page, so Bridge never sees card details, and nothing is bought until Visa says it's paid. Saying "no" or not paying in 10 minutes cancels the link. Sandbox only: Visa test cards, no real money. Mock mode stays as the offline backup.
 - **Post-purchase.** Everyone gets "✅ Mei bought Nai Nai a gift 🎁, arriving Wednesday" in their own language. A photo of the manual gets explained in Chinese. If nothing fits, Bridge suggests sending money instead.
 
 Supporting features: tone-aware translation with a family glossary, a bilingual member who settles low-confidence translations (Bridge learns from each answer), 🚨 emergency detection, photo and voice-note relay, and Visa Direct money gifts with scam checks.
@@ -50,11 +50,11 @@ Supporting features: tone-aware translation with a family glossary, a bilingual 
 ## What's next
 
 - Shipped/delivered updates and a fuller family vote (`familyVote` / `trackOrder`, in progress).
-- Paying through the Visa booth's card API instead of mock checkout.
+- Visa Intelligent Commerce: let Bridge pay by itself within a limit the cardholder sets (today a person always pays on the Visa link).
 - A family wallet that earns points toward the next gift.
 
 ## Built with
 
-TypeScript · Node.js · Photon Spectrum SDK · SerpApi Google Shopping · Google Gemini API · OpenAI speech-to-text · ffmpeg · heic-convert · Visa Direct · Visa Foreign Exchange Rates API
+TypeScript · Node.js · Photon Spectrum SDK · SerpApi Google Shopping · Google Gemini API · OpenAI speech-to-text · ffmpeg · heic-convert · Visa Acceptance (Cybersource) Invoicing / payment links · Visa Direct · Visa Foreign Exchange Rates API
 
 [TODO: screenshots of the option cards in Chinese and English, a tapback vote, and the confirmation. Demo video link: [TODO].]
