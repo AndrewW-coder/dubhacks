@@ -17,6 +17,8 @@ export interface FamilyMember {
   currency?: string; // e.g. "USD", "TWD" (used for Visa gifts)
   isTrustedForMoney?: boolean; // confirms money requests coming from elders
   tapbackNotes?: boolean; // also get a short text like "❤️ Kevin loved your message" (tapbacks are easy to miss)
+  shipTo?: { city: string; country: string }; // shopping, demo only: city + country, never a street address
+  shopLimitUsd?: number; // shopping: buyer's auto-approve limit (default SHOP_DEFAULT_LIMIT_USD, 50)
 }
 
 export interface Family {
