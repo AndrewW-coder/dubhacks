@@ -145,7 +145,14 @@ function numberFrom(v: unknown): number | undefined {
 }
 
 function httpsUrl(v: unknown): string | undefined {
-  return typeof v === "string" && /^https?:\/\//i.test(v) ? v : undefined;
+  if (typeof v !== "string" || !/^https?:\/\//i.test(v.trim())) return undefined;
+  // SerpApi's Google Shopping links contain raw spaces ("q=blood pressure monitor") and "|".
+  // Encode them: iMessage cuts a link at the first space, and the card only shows links with none.
+  try {
+    return new URL(v.trim()).href.replace(/\|/g, "%7C");
+  } catch {
+    return undefined;
+  }
 }
 
 /** One SerpApi shopping result → Product (undefined if it has no title or price). */
