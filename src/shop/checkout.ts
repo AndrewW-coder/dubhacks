@@ -28,21 +28,32 @@
 //        sandbox         the Visa sandbox via sendGift(buyer → merchant stand-in) for now, keeping
 //                        maybeCharged semantics. Needs VISA_MODE=sandbox and the Visa credentials,
 //                        otherwise error "shop sandbox not set up …".
+//        paylink         a real Visa checkout page (spec U2-16, payments/visaAcceptance.ts, SANDBOX
+//                        ONLY: Visa test cards, no real money). Bridge creates a Visa Acceptance
+//                        invoice for the exact item and price and texts its hosted payment link to
+//                        the buyer. Paying on Visa's page IS the buyer's yes, so step 3's ❤️/yes
+//                        question is replaced by the link (the scam check still runs first, and its
+//                        warning is shown with the link). Bridge polls the invoice: PAID → ordered;
+//                        "no" (or 👎) to the link, or no payment within PAYLINK_TIMEOUT_MS → the
+//                        link is canceled and nothing is bought. Bridge never sees card details.
 //   5. Errors are plain English. maybeCharged → "may have gone through; check before trying again".
 //
 // Checkout only messages people it asks (the buyer, a guard). Telling the family about the order
 // (or the failure) is the caller's job (shopFlow / trackOrder), using OrderResult.
 //
 // Settings (read from process.env at call time):
-//   SHOP_MODE                mock | sandbox (default mock)
+//   SHOP_MODE                mock | paylink | sandbox (default mock)
 //   SHOP_DEFAULT_LIMIT_USD   buyer's limit when FamilyMember.shopLimitUsd is unset (default 50)
 //   PAYMENT_CONFIRM_TIMEOUT_MS  how long to wait for a yes (shared with flow.ts, default 3 min)
+//   PAYLINK_TIMEOUT_MS       paylink: how long the Visa link stays open (default 600000 = 10 min)
+//   PAYLINK_POLL_MS          paylink: how often Bridge checks whether it was paid (default 4000)
 
 import { config } from "../config.js";
-import { ask, type Answer } from "../relay/prompts.js";
+import { ask, cancel as cancelPrompt, openPrompt, type Answer } from "../relay/prompts.js";
 import { claimMoneySlot, confirmTimeoutMs, isYes, moneyPrompt, say } from "../payments/flow.js";
 import { formatSignals, GIFT_CARD_MARKERS, isElder, scamSignals, trustedConfirmers } from "../payments/scamCheck.js";
 import { formatMoney, isSupportedCurrency, MAX_GIFT_USD, quote, sendGift } from "../payments/visa.js";
+import { cancelPayLink, createPayLink, getPayLink, isSandbox } from "../payments/visaAcceptance.js";
 import type { Family, FamilyMember, LanguageCode } from "../types.js";
 
 import type { Product } from "./catalog.js";
@@ -75,7 +86,7 @@ export interface CheckoutOptions {
 export const SHOP_DEFAULT_LIMIT_USD = 50;
 
 /** Swappable for tests (checkout.selftest.ts); production uses visa.ts. */
-export const checkoutDeps = { sendGift };
+export const checkoutDeps = { sendGift, createPayLink, getPayLink, cancelPayLink };
 
 const ZERO_DECIMAL = new Set(["JPY", "KRW", "VND"]);
 const MIN_PRICE = 0.01;
@@ -92,7 +103,7 @@ function settings() {
   const env = (k: string) => process.env[k]?.trim() ?? "";
   const limit = Number(env("SHOP_DEFAULT_LIMIT_USD"));
   return {
-    mode: env("SHOP_MODE").toLowerCase() === "sandbox" ? ("sandbox" as const) : ("mock" as const),
+    mode: (["sandbox", "paylink"] as const).find((m) => m === env("SHOP_MODE").toLowerCase()) ?? ("mock" as const),
     defaultLimitUsd: env("SHOP_DEFAULT_LIMIT_USD") && Number.isFinite(limit) && limit >= 0 ? limit : SHOP_DEFAULT_LIMIT_USD,
     visaMode: env("VISA_MODE") || config.visaMode,
   };
@@ -170,8 +181,10 @@ async function run(
 
   // One money question per member: hold the buyer's slot from here until we're done, so no
   // other money prompt opens for them while a guard is being asked (same rule as flow.ts).
+  // paylink: the Visa link is the buyer's question, so their slot is held while it's open.
+  const paylink = settings().mode === "paylink";
   let releaseBuyer: (() => void) | undefined;
-  if (mustConfirm) {
+  if (mustConfirm || paylink) {
     releaseBuyer = claimMoneySlot(buyer);
     if (!releaseBuyer) return fail(`${buyer.name} has another money question from me open. Answer that first, then try again. Nothing was bought.`);
   }
@@ -200,6 +213,10 @@ ${formatSignals(reasons)}
     }
 
     // ── 3. The buyer agrees (the core rule) ────────────────────────────────
+    if (paylink) {
+      // Paying on Visa's own page is the buyer's yes: the link replaces the ❤️/yes question.
+      return await payByLink(family, buyer, forMember, product, { name, letter, merchant, chargeAmount, buyerCurrency, usdAmount: currency === "USD" ? price : roundFor(usd, "USD"), overLimit, limit, warning }, markPaying);
+    }
     if (mustConfirm || warning) {
       const answer = await ask(
         buyer.handle,
@@ -298,6 +315,121 @@ async function pay(buyer: FamilyMember, product: Product, productCurrency: strin
   }
   if (/isn't set up/i.test(r.error ?? "")) return fail(`shop sandbox not set up (${r.error}). Nothing was bought.`);
   return fail(`The payment didn't go through: ${r.error ?? "unknown error"}. Nothing was charged.`);
+}
+
+// ── paylink: a real Visa checkout page (spec U2-16) ─────────────────────────
+
+interface LinkInfo {
+  name: string;
+  letter: string; // "B · " or ""
+  merchant: string; // " · Store" or ""
+  chargeAmount: number; // in the buyer's currency (shown as ≈)
+  buyerCurrency: string;
+  usdAmount: number; // what the Visa invoice charges
+  overLimit: boolean;
+  limit: number;
+  warning: string;
+}
+
+// Threaded replies to the link can say any of these; a bare (unthreaded) answer only reaches the
+// link when prompts.ts sees it as a short answer ("no", "n", "cancel", "不"), hence "reply to this message".
+const NO_ANSWER = /^\s*(n|no|nope|nah|cancel|stop|不|不要|不用|不买|不買|取消|算了)\s*[.!。！]?\s*$/i;
+const isNoAnswer = (a: Answer) => (a.via === "tapback" ? a.tapback === "dislike" : NO_ANSWER.test(a.text ?? ""));
+
+function linkTimeoutMs(): number {
+  const n = Number(process.env.PAYLINK_TIMEOUT_MS);
+  return Number.isFinite(n) && n > 0 ? n : 10 * 60_000;
+}
+function linkPollMs(): number {
+  const n = Number(process.env.PAYLINK_POLL_MS);
+  return Number.isFinite(n) && n > 0 ? n : 4_000;
+}
+
+async function payByLink(
+  family: Family, buyer: FamilyMember, forMember: FamilyMember, product: Product, info: LinkInfo, markPaying: () => void,
+): Promise<OrderResult> {
+  // Invoiced in USD: Visa sandbox merchants are normally set up for USD only. A buyer with another
+  // currency sees the approximate amount in theirs too.
+  const amountStr = formatMoney(info.usdAmount, "USD") + (info.buyerCurrency === "USD" ? "" : ` (≈ ${formatMoney(approx(info.chargeAmount), info.buyerCurrency)})`);
+  const reference = `bridge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  const created = await checkoutDeps.createPayLink({
+    reference,
+    description: `${productName(product, "en")} for ${forMember.name} (Bridge family shopping)`,
+    productName: productName(product, "en"),
+    productSku: typeof product.id === "string" ? product.id : undefined,
+    amount: info.usdAmount,
+    currency: "USD",
+    customerName: buyer.name,
+  });
+  if (!created.ok) return fail(`I couldn't make the Visa payment link (${created.error}). Nothing was bought.`);
+
+  const timeoutMs = linkTimeoutMs();
+  let saidNo = false;
+  let messageId: string | undefined;
+  try {
+    const limitNote = info.overLimit ? ` (over your ${formatMoney(info.limit, "USD")} limit)` : "";
+    const testNote = isSandbox() ? " Visa test mode: use a test card, no real money." : "";
+    const prompt = await moneyPrompt(
+      `💳 ${info.letter}${info.name} · ${amountStr} for ${forMember.name}${info.merchant}`,
+      `${info.warning}To buy it${limitNote}, pay on Visa's secure checkout page below and I'll order it as soon as it's paid. To cancel, reply "no" to this message or 👎 it.${testNote}`,
+      buyer,
+      family,
+    );
+    // The link alone on the last line, so iMessage previews it. Only "no"/👎 answers this message;
+    // anything else the buyer writes is relayed as normal chat.
+    const opened = await openPrompt(buyer.handle, `${prompt}\n${created.url}`, { timeoutMs: timeoutMs + 5_000, accept: isNoAnswer });
+    messageId = opened.messageId;
+    void opened.answer.then((a) => { if (a && isNoAnswer(a)) saidNo = true; });
+  } catch (err) {
+    // The link never reached the buyer: withdraw it so it can't be paid by accident.
+    console.error(`[shop] couldn't send the Visa link: ${(err as Error)?.message ?? err}`);
+    return (await closeLink(created.id))
+      ? fail("I couldn't send the Visa payment link, so I canceled it. Nothing was bought.")
+      : { ok: false, maybeCharged: true, error: "I couldn't send the Visa payment link or confirm it was closed. Please check before trying again." };
+  }
+  markPaying(); // the buyer has the link: from here an unexpected error must say "may have gone through"
+
+  try {
+    const end = Date.now() + timeoutMs;
+    while (!saidNo && Date.now() < end) {
+      await sleep(Math.min(linkPollMs(), Math.max(0, end - Date.now())));
+      if (saidNo) break;
+      const st = await checkoutDeps.getPayLink(created.id);
+      if (!st.ok) continue; // a blip: keep checking until the link times out
+      if (st.status === "PAID") return paidOrder(created.id, info);
+      if (st.status === "CANCELED") return fail(`The Visa payment link was canceled, so nothing was bought.`);
+    }
+    // "no" or timed out: withdraw the link (retrying), then look once more in case it was paid.
+    const why = saidNo ? `${buyer.name} said no` : `${buyer.name} didn't pay within ${Math.max(1, Math.round(timeoutMs / 60_000))} min`;
+    const closed = await closeLink(created.id);
+    const final = await checkoutDeps.getPayLink(created.id);
+    if (final.ok && final.status === "PAID") return paidOrder(created.id, info);
+    if (closed || (final.ok && final.status === "CANCELED")) return fail(`${why}, so I canceled the Visa link and nothing was bought.`);
+    // Not confirmed closed: the link may still be payable, so never say "nothing was charged".
+    return { ok: false, maybeCharged: true, error: `${why}, but I couldn't close the Visa link. Please don't pay it, and check before trying again.` };
+  } finally {
+    if (messageId) cancelPrompt(messageId);
+  }
+}
+
+/** Cancels an invoice, retrying a few times. True once Visa confirms it's canceled. */
+async function closeLink(id: string): Promise<boolean> {
+  for (let i = 0; i < 3; i++) {
+    if (await checkoutDeps.cancelPayLink(id)) return true;
+    const st = await checkoutDeps.getPayLink(id);
+    if (st.ok && (st.status === "CANCELED" || st.status === "PAID")) return st.status === "CANCELED";
+    await sleep(200 * (i + 1));
+  }
+  return false;
+}
+
+function paidOrder(invoiceId: string, info: LinkInfo): OrderResult {
+  const eta = new Date(Date.now() + ETA_DAYS * 86_400_000).toISOString().slice(0, 10);
+  return { ok: true, orderId: `visa-inv-${invoiceId}`, charged: { amount: info.usdAmount, currency: "USD" }, eta };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
