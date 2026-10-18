@@ -12,7 +12,8 @@
 //   CARD_IMAGES          on | off. Default: on in live mode, off otherwise (the simulator and
 //                        selftests keep text cards).
 //   CARD_BROWSER_PATH    Edge/Chrome executable; default: the usual Windows/macOS install paths.
-//   CARD_IMAGE_TIMEOUT_MS  per card, default 8000 (a slow product photo is dropped, not waited on).
+//   CARD_IMAGE_TIMEOUT_MS  how long to wait for a product photo, default 4000 (then the card is shot
+//                        without it, so a slow photo site never turns a card back into text).
 
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
@@ -58,7 +59,7 @@ export function renderOptionCard(data: CardData): Promise<string | undefined> {
   if (!cardImagesEnabled()) return Promise.resolve(undefined);
   const key = createHash("sha1").update(CSS).update(JSON.stringify(data)).digest("hex").slice(0, 16); // a design change re-renders
   if (!rendering.has(key)) {
-    const limit = (Number(process.env.CARD_IMAGE_TIMEOUT_MS) || 8000) + 4000;
+    const limit = (Number(process.env.CARD_IMAGE_TIMEOUT_MS) || 4000) + 4000;
     let timer: NodeJS.Timeout | undefined;
     const timedOut = new Promise<undefined>((r) => {
       timer = setTimeout(() => {
@@ -79,23 +80,51 @@ export function renderOptionCard(data: CardData): Promise<string | undefined> {
 
 async function render(data: CardData, path: string): Promise<string | undefined> {
   if (existsSync(path)) return path;
-  const b = await getBrowser();
-  if (!b) return undefined;
-  await mkdir(OUT_DIR, { recursive: true });
-  const timeout = Number(process.env.CARD_IMAGE_TIMEOUT_MS) || 8000;
-  const page = await b.newPage();
+  // Step timings, logged per card, to find what's slow in a live run.
+  const label = `${data.letter} "${data.name.slice(0, 14)}"`;
+  const t0 = Date.now();
+  let mark = t0;
+  const steps: string[] = [];
+  const step = (name: string, extra = "") => {
+    const now = Date.now();
+    steps.push(`${name} ${now - mark}ms${extra}`);
+    mark = now;
+  };
+  active++;
+  console.log(`[cards] ${label}: start (${active} rendering at once)`);
   try {
-    await page.setJavaScriptEnabled(false); // our own static HTML; product text is escaped
-    await page.setViewport({ width: 900, height: 1125, deviceScaleFactor: 1 });
-    await page.setContent(cardHtml(data), { waitUntil: "load", timeout }).catch(() => {
-      // A slow product photo: shoot what's there rather than fail the card.
-    });
-    await page.screenshot({ path: path as `${string}.png`, type: "png" });
-    return path;
+    const b = await getBrowser();
+    step("browser");
+    if (!b) return undefined;
+    await mkdir(OUT_DIR, { recursive: true });
+    const timeout = Number(process.env.CARD_IMAGE_TIMEOUT_MS) || 4000;
+    const page = await b.newPage();
+    step("newPage");
+    try {
+      await page.setJavaScriptEnabled(false); // our own static HTML; product text is escaped
+      await page.setViewport({ width: 900, height: 1125, deviceScaleFactor: 1 });
+      step("setup");
+      let loaded = true;
+      await page.setContent(cardHtml(data), { waitUntil: "load", timeout }).catch(() => {
+        loaded = false; // a slow product photo: shoot what's there rather than fail the card
+      });
+      step("content", loaded ? "" : " (photo still loading)");
+      await page.screenshot({ path: path as `${string}.png`, type: "png" });
+      step("screenshot");
+      return path;
+    } finally {
+      await page.close().catch(() => {});
+    }
+  } catch (err) {
+    step("failed", ` (${err instanceof Error ? err.message.slice(0, 80) : err})`);
+    throw err;
   } finally {
-    await page.close().catch(() => {});
+    active--;
+    console.log(`[cards] ${label}: ${steps.join(", ")} = ${Date.now() - t0}ms total`);
   }
 }
+
+let active = 0; // cards rendering right now (for the timing log)
 
 /** Drop the current browser so the next card starts a fresh one. */
 function resetBrowser() {

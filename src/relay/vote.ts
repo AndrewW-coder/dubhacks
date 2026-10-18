@@ -114,7 +114,9 @@ export function familyVote(
     };
 
     const sendCards = async (voter: FamilyMember) => {
+      const t0 = Date.now();
       const raw = await card(voter);
+      console.log(`[vote] ${voter.name}: cards ready in ${Math.round((Date.now() - t0) / 1000)}s`);
       // Hold the cards briefly while another question is open, so it stays the newest one.
       const holdStart = Date.now();
       if (busy(voter)) console.log(`[vote] holding ${voter.name}'s cards: another question is open`);
@@ -156,6 +158,7 @@ export function familyVote(
             sent = await prompt(m.text);
           }
           const { messageId, answer } = sent;
+          console.log(`[vote] ${voter.name}: sent part ${i + 1}/${parts.length}${"file" in m && !textAlreadySent ? " (image)" : ""}`);
           ids.push(messageId);
           if (cardIndex !== undefined) cardIds[cardIndex] ??= messageId; // votes show on the image when there is one
           if (closed) cancel(messageId);
@@ -173,12 +176,13 @@ export function familyVote(
           });
         }
       }
+      console.log(`[vote] ${voter.name}: all cards sent`);
       // Cards that went out late (held for another question) still show the votes so far.
       for (const other of voters) mirror(other, voter);
     };
 
     for (const voter of voters) {
-      sendCards(voter).catch((err) => console.error("[vote] couldn't send the cards to", voter.id, err));
+      sendCards(voter).catch((err) => console.error(`[vote] couldn't send the cards to ${voter.name}:`, err instanceof Error ? err.message : err));
     }
   });
 }
