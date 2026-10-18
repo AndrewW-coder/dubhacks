@@ -227,12 +227,14 @@ async function runDecision(
     buyerAgreed = result.votes.get(buyer.id) === winner && result.how?.get(buyer.id) === "card";
     const confirm = await buyerMustConfirm(buyer, options[winner]!.product, buyerAgreed);
     const n = [...result.votes.values()].filter((v) => v === winner).length;
+    // A split: another option got as many votes, so the tie-breaker (the buyer) decided.
+    const split = options.some((_, i) => i !== winner && [...result.votes.values()].filter((v) => v === i).length === n);
     await Promise.all(
       voters.map(async (m) => {
         // One call per reader: the product name (only if it has none in their language) + the sentence.
         const p = options[winner!]!.product;
         const own = ownName(m, p);
-        const sentence = winnerSentence(n, m, buyer, forMember, confirm);
+        const sentence = winnerSentence(n, m, buyer, forMember, confirm, split);
         const t = await translateBatch(own ? [sentence] : [englishName(p), sentence], m, family);
         await sendText(m.handle, `🗳️ ${LETTERS[winner!]} · ${own ?? t[0]}\n${t[t.length - 1]}`);
       }),
@@ -261,8 +263,10 @@ async function runDecision(
   shopDeps.trackOrder(family, buyer, forMember, product, order, { isGift, what: decision.what });
 }
 
-function winnerSentence(votes: number, reader: FamilyMember, buyer: FamilyMember, forMember: FamilyMember, confirm: boolean): string {
-  const chose = `The family chose this (${votes === 1 ? "1 vote" : `${votes} votes`}).`;
+function winnerSentence(votes: number, reader: FamilyMember, buyer: FamilyMember, forMember: FamilyMember, confirm: boolean, split = false): string {
+  const chose = split
+    ? `The votes were split, so I'm going with ${reader.id === buyer.id ? "your" : `${buyer.name}'s`} pick (the person paying).`
+    : `The family chose this (${votes === 1 ? "1 vote" : `${votes} votes`}).`;
   const to = reader.id === forMember.id ? "you" : forMember.name;
   // SHOP_MODE=paylink (checkout.ts): the buyer always pays on a Visa checkout page Bridge sends them.
   if (process.env.SHOP_MODE?.trim().toLowerCase() === "paylink") {
