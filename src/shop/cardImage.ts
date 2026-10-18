@@ -59,12 +59,16 @@ export function renderOptionCard(data: CardData): Promise<string | undefined> {
   const key = createHash("sha1").update(CSS).update(JSON.stringify(data)).digest("hex").slice(0, 16); // a design change re-renders
   if (!rendering.has(key)) {
     const limit = (Number(process.env.CARD_IMAGE_TIMEOUT_MS) || 8000) + 4000;
-    const timedOut = new Promise<undefined>((r) => setTimeout(() => {
-      console.warn(`[cards] a card took over ${limit} ms; sending text instead`);
-      r(undefined);
-    }, limit).unref?.());
-    const job = Promise.race([render(data, join(OUT_DIR, `${key}.png`)), timedOut]).catch((err) => {
+    let timer: NodeJS.Timeout | undefined;
+    const timedOut = new Promise<undefined>((r) => {
+      timer = setTimeout(() => {
+        console.warn(`[cards] a card took over ${limit} ms; sending text instead`);
+        r(undefined);
+      }, limit);
+    });
+    const job = Promise.race([render(data, join(OUT_DIR, `${key}.png`)), timedOut]).finally(() => clearTimeout(timer)).catch((err) => {
       console.error("[cards] couldn't render a card; sending text instead", err instanceof Error ? err.message : err);
+      resetBrowser(); // a frozen Edge would fail every later card too
       return undefined;
     });
     rendering.set(key, job);
@@ -93,6 +97,13 @@ async function render(data: CardData, path: string): Promise<string | undefined>
   }
 }
 
+/** Drop the current browser so the next card starts a fresh one. */
+function resetBrowser() {
+  const old = browser;
+  browser = undefined;
+  void old?.then((b) => b?.close()).catch(() => {});
+}
+
 function getBrowser(): Promise<Browser | undefined> {
   browser ??= (async () => {
     const exe = [process.env.CARD_BROWSER_PATH?.trim(), ...BROWSERS].find((p) => p && existsSync(p));
@@ -101,7 +112,8 @@ function getBrowser(): Promise<Browser | undefined> {
       return undefined;
     }
     const { launch } = await import("puppeteer-core");
-    const b = await launch({ executablePath: exe, headless: true, args: ["--disable-gpu", "--hide-scrollbars", "--no-first-run"] });
+    // protocolTimeout: a frozen screenshot fails in 15 s instead of puppeteer's default 3 minutes.
+    const b = await launch({ executablePath: exe, headless: true, protocolTimeout: 15_000, args: ["--disable-gpu", "--hide-scrollbars", "--no-first-run"] });
     process.once("exit", () => void b.close().catch(() => {}));
     console.log("[cards] rendering cards with", exe.split(/[\\/]/).pop());
     return b;

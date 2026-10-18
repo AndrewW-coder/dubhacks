@@ -49,6 +49,7 @@ const NOT_VOTES = new Set<TapbackKind>(["dislike", "question"]);
 const CLEAR_ON_CARD = new Set<TapbackKind>(["love", "emphasize"]);
 const BUSY_POLL_MS = 250;
 const MAX_HOLD_MS = 10_000; // never hold someone's cards longer than this
+const IMAGE_SEND_MS = 20_000; // an image that hasn't sent by then is replaced by its text card
 
 let voteSeq = 0;
 
@@ -131,20 +132,37 @@ export function familyVote(
         const cardIndex = parts.length > 1 && i >= 1 && i <= n ? i - 1 : undefined;
         const part = parts[i]!;
         const messages = typeof part === "string" ? [{ text: part }] : part.image ? [{ text: "", file: part.image, key: "img" }, { text: part.text }] : [{ text: part.text }];
+        let textAlreadySent = false;
         for (const m of messages) {
           if (closed) return;
-          const { messageId, answer } = await openPrompt(voter.handle, m.text, {
-            timeoutMs: timeoutMs + 5_000,
-            accept: (a) => optionFor(voter, a, cardIndex) !== undefined,
-            filePath: "file" in m ? m.file : undefined,
-          });
+          if (textAlreadySent) break;
+          const prompt = (text: string, filePath?: string) =>
+            openPrompt(voter.handle, text, { timeoutMs: timeoutMs + 5_000, accept: (a) => optionFor(voter, a, cardIndex) !== undefined, filePath });
+          let sent: Awaited<ReturnType<typeof prompt>>;
+          let key = "key" in m ? `-${m.key}` : "";
+          if ("file" in m) {
+            // A stuck image upload must never hold up this person's other cards: fall back to the text line.
+            const image = await withTimeout(prompt("", m.file), IMAGE_SEND_MS).catch((err) => {
+              console.warn(`[vote] card image to ${voter.name} didn't send (${err instanceof Error ? err.message : err}); sending the text card`);
+              return undefined;
+            });
+            if (image) sent = image;
+            else {
+              sent = await prompt(typeof part === "string" ? part : part.text);
+              textAlreadySent = true;
+              key = "";
+            }
+          } else {
+            sent = await prompt(m.text);
+          }
+          const { messageId, answer } = sent;
           ids.push(messageId);
           if (cardIndex !== undefined) cardIds[cardIndex] ??= messageId; // votes show on the image when there is one
           if (closed) cancel(messageId);
           // Each part is a shared "original" with one copy per voter, so threaded replies and
           // tapbacks that aren't votes land on the same card in everyone else's thread.
           // (Copies only: there is no sender's original, so nothing is ever mirrored back to "Bridge".)
-          map.recordRelay(`${id}-part-${i}${"key" in m ? `-${m.key}` : ""}`, voter.handle, messageId);
+          map.recordRelay(`${id}-part-${i}${key}`, voter.handle, messageId);
           void answer.then((a) => {
             if (!a) return; // withdrawn or timed out
             const option = optionFor(voter, a, cardIndex);
@@ -163,6 +181,11 @@ export function familyVote(
       sendCards(voter).catch((err) => console.error("[vote] couldn't send the cards to", voter.id, err));
     }
   });
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  return Promise.race([p, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`timed out after ${ms} ms`)), ms); })]).finally(() => clearTimeout(timer));
 }
 
 /** Another Bridge question open for this voter, besides the vote's own prompts? */
