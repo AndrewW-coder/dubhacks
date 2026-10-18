@@ -56,6 +56,9 @@ export async function handleIncoming(msg: IncomingMessage): Promise<void> {
     case "voice": {
       const path = await downloadAttachment(msg.attachment!.id, msg.attachment!.fileName);
       const transcript = await transcribe(path, sender.language); // [U2]
+      // transcribe() never throws: on failure it returns a "(voice note — …)" placeholder (see
+      // media/voice.ts). Never translate that: forward the recording itself instead.
+      if (/^\(voice note — /.test(transcript)) return relayRecording(family, sender, msg, path);
       return relayText(family, sender, msg, transcript, "🎤 ");
       // TODO [U1] optionally also forward the original audio, or send synthesize() output (U2) back
     }
@@ -138,6 +141,22 @@ async function relayAttachment(family: Family, sender: FamilyMember, msg: Incomi
         const explanation = await explainImage(path, recipient.language); // [U2]
         if (explanation) await sendText(recipient.handle, `📷 ${sender.name}'s photo: ${explanation}`, { replyToId: id });
       }
+    }),
+  );
+}
+
+/** A voice note that couldn't be turned into text: send the recording, with a line explaining why. */
+async function relayRecording(family: Family, sender: FamilyMember, msg: IncomingMessage, path: string) {
+  map.recordOriginal(msg.id, { fromHandle: sender.handle, sentAt: msg.receivedAt });
+  await Promise.all(
+    others(family, sender).map(async (recipient) => {
+      const id = await sendFile(recipient.handle, path, {
+        replyToId: replyTargetFor(msg.replyToId, recipient),
+        asVoiceNote: true,
+      });
+      map.recordRelay(msg.id, recipient.handle, id);
+      const note = await say(family, recipient, `${sender.name} sent a voice note. I couldn't turn it into text, so here's the recording.`);
+      await sendText(recipient.handle, `🎤 ${note}`, { replyToId: id });
     }),
   );
 }
